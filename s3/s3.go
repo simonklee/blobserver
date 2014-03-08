@@ -62,7 +62,7 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 
 	client := &s3.Client{
 		Auth: &s3.Auth{
-			AccessKey: s3conf.AccessKey,
+			AccessKey:       s3conf.AccessKey,
 			SecretAccessKey: s3conf.SecretAccessKey,
 			Hostname:        hostname,
 		},
@@ -70,7 +70,7 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 	}
 	sto := &s3Storage{
 		s3Client: client,
-		bucket:   s3conf.Bucket, 
+		bucket:   s3conf.Bucket,
 		hostname: hostname,
 	}
 	return sto, nil

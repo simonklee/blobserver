@@ -23,7 +23,6 @@ import (
 	"github.com/simonz05/blobserver/config"
 )
 
-
 // A StorageConstructor returns a Storage implementation from a configuration.
 type StorageConstructor func(*config.Config) (Storage, error)
 

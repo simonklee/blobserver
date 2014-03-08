@@ -11,11 +11,11 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/simonz05/blobserver"
 	"github.com/simonz05/util/handler"
 	"github.com/simonz05/util/log"
 	"github.com/simonz05/util/pat"
 	"github.com/simonz05/util/sig"
-	"github.com/simonz05/blobserver"
 )
 
 func setupServer(storage blobserver.Storage) (err error) {

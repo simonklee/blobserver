@@ -8,18 +8,18 @@ import (
 	"runtime/pprof"
 
 	"git.tideland.biz/goas/monitoring"
-	"github.com/simonz05/util/log"
 	"github.com/simonz05/blobserver"
-	"github.com/simonz05/blobserver/server"
 	"github.com/simonz05/blobserver/config"
+	"github.com/simonz05/blobserver/server"
+	"github.com/simonz05/util/log"
 )
 
 var (
-	help       = flag.Bool("h", false, "show help text")
-	laddr      = flag.String("http", ":6064", "set bind address for the HTTP server")
-	version    = flag.Bool("version", false, "show version number and exit")
+	help           = flag.Bool("h", false, "show help text")
+	laddr          = flag.String("http", ":6064", "set bind address for the HTTP server")
+	version        = flag.Bool("version", false, "show version number and exit")
 	configFilename = flag.String("config", "config.toml", "config file path")
-	cpuprofile = flag.String("debug.cpuprofile", "", "write cpu profile to file")
+	cpuprofile     = flag.String("debug.cpuprofile", "", "write cpu profile to file")
 )
 
 var Version = "0.1.0"
@@ -51,7 +51,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if conf.Listen == "" && *laddr == ""{
+	if conf.Listen == "" && *laddr == "" {
 		log.Fatal("Listen address required")
 	} else if conf.Listen == "" {
 		conf.Listen = *laddr
