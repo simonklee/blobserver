@@ -15,12 +15,13 @@ import (
 	"github.com/simonz05/util/log"
 	"github.com/simonz05/util/pat"
 	"github.com/simonz05/util/sig"
+	"github.com/simonz05/blobserver"
 )
 
-func setupServer() (err error) {
+func setupServer(storage blobserver.Storage) (err error) {
 	router := mux.NewRouter()
 	sub := router.PathPrefix("/v1/blob").Subrouter()
-	pat.Post(sub, "/upload/", newUploadHandler(struct{}{}))
+	pat.Post(sub, "/upload/", newUploadHandler(storage))
 
 	router.StrictSlash(false)
 	// global middleware
@@ -29,8 +30,8 @@ func setupServer() (err error) {
 	return nil
 }
 
-func ListenAndServe(laddr string) error {
-	if err := setupServer(); err != nil {
+func ListenAndServe(laddr string, storage blobserver.Storage) error {
+	if err := setupServer(storage); err != nil {
 		return err
 	}
 
