@@ -15,17 +15,16 @@ import (
 	"github.com/simonz05/util/log"
 	"github.com/simonz05/util/pat"
 	"github.com/simonz05/util/sig"
-	"github.com/simonz05/blobserver/storage"
 )
 
 func setupServer() (err error) {
 	router := mux.NewRouter()
 	sub := router.PathPrefix("/v1/blob").Subrouter()
-	pat.Post(sub, "/upload/", newUploadHandler())
+	pat.Post(sub, "/upload/", newUploadHandler(struct{}{}))
 
 	router.StrictSlash(false)
 	// global middleware
-	wrapped := handler.Use(router, handler.LogHandler, handler.MeasureHandler, handler.RecoveryHandler) 
+	wrapped := handler.Use(router, handler.LogHandler, handler.MeasureHandler, handler.RecoveryHandler)
 	http.Handle("/", wrapped)
 	return nil
 }
