@@ -14,7 +14,7 @@ type Config struct {
 }
 
 type S3Config struct {
-	Hostname        string
+	Hostname        string // Optional. Default s3.amazonaws.com
 	AccessKey       string `toml:"aws_access_key"`
 	SecretAccessKey string `toml:"aws_secret_access_key"`
 	Bucket          string
@@ -27,7 +27,8 @@ func (c *Config) StorageType() string {
 	return ""
 }
 
-func FromFile(filename string) (config *Config, err error) {
-	_, err = toml.DecodeFile(filename, config)
-	return
+func ReadFile(filename string) (*Config, error) {
+	config := new(Config)
+	_, err := toml.DecodeFile(filename, config)
+	return config, err
 }

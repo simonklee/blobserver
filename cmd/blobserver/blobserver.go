@@ -45,7 +45,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	conf, err := config.FromFile(*configFilename)
+	conf, err := config.ReadFile(*configFilename)
 
 	if err != nil {
 		log.Fatal(err)

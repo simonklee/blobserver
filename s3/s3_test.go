@@ -21,41 +21,25 @@ import (
 	"os"
 	"testing"
 
-	"github.com/simonz05/blobserver/blobserver"
-	"github.com/simonz05/blobserver/blobserver/storagetest"
-	"github.com/simonz05/blobserver/jsonconfig"
+	"github.com/simonz05/blobserver"
+	"github.com/simonz05/blobserver/storagetest"
+	"github.com/simonz05/blobserver/config"
 )
 
 func TestS3(t *testing.T) {
-	cfgFile := os.Getenv("CAMLI_S3_TEST_CONFIG_JSON")
-	if cfgFile == "" {
-		t.Skip("Skipping manual test. To enable, set the environment variable CAMLI_S3_TEST_CONFIG_JSON to the path of a JSON configuration for the s3 storage type.")
+	configFile := os.Getenv("BLOBSERVER_S3_TEST_CONFIG")
+	if configFile == "" {
+		t.Skip("Skipping manual test. To enable, set the environment variable BLOBSERVER_S3_TEST_CONFIG to the path of a JSON configuration for the s3 storage type.")
 	}
-	conf, err := jsonconfig.ReadFile(cfgFile)
+	conf, err := config.ReadFile(configFile)
 	if err != nil {
-		t.Fatalf("Error reading s3 configuration file %s: %v", cfgFile, err)
+		t.Fatalf("Error reading s3 configuration file %s: %v", configFile, err)
 	}
 	storagetest.Test(t, func(t *testing.T) (sto blobserver.Storage, cleanup func()) {
-		sto, err := newFromConfig(nil, conf)
+		sto, err := newFromConfig(conf)
 		if err != nil {
 			t.Fatalf("newFromConfig error: %v", err)
 		}
 		return sto, func() {}
 	})
-}
-
-func TestNextStr(t *testing.T) {
-	tests := []struct {
-		s, want string
-	}{
-		{"", ""},
-		{"abc", "abd"},
-		{"ab\xff", "ac\x00"},
-		{"a\xff\xff", "b\x00\x00"},
-	}
-	for _, tt := range tests {
-		if got := nextStr(tt.s); got != tt.want {
-			t.Errorf("nextStr(%q) = %q; want %q", tt.s, got, tt.want)
-		}
-	}
 }
