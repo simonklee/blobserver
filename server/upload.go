@@ -11,6 +11,7 @@ import (
 	"github.com/simonz05/blobserver/blob"
 	"github.com/simonz05/blobserver/protocol"
 	"github.com/simonz05/util/log"
+	"github.com/simonz05/util/httputil"
 	"github.com/simonz05/util/readerutil"
 )
 
@@ -28,7 +29,7 @@ func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiv
 
 	multipart, err := req.MultipartReader()
 	if multipart == nil {
-		BadRequestError(rw, fmt.Sprintf(
+		httputil.BadRequestError(rw, fmt.Sprintf(
 			"Expected multipart/form-data POST request; %v", err))
 		return
 	}
@@ -96,5 +97,5 @@ func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiv
 
 	res.ErrorText = errBuf.String()
 
-	ReturnJSON(rw, res)
+	httputil.ReturnJSON(rw, res)
 }
