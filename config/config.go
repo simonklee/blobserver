@@ -11,19 +11,33 @@ import (
 type Config struct {
 	Listen string
 	S3     *S3Config
+	Swift  *SwiftConfig
 }
 
 type S3Config struct {
 	Hostname        string // Optional. Default s3.amazonaws.com
-	AccessKey       string `toml:"aws_access_key"`
-	SecretAccessKey string `toml:"aws_secret_access_key"`
+	AccessKey       string `toml:"access_key"`
+	SecretAccessKey string `toml:"secret_access_key"`
 	Bucket          string
-	DefaultACL      string `toml:"aws_default_acl"` // optional. Default private. public-read
+	DefaultACL      string `toml:"default_acl"` // optional. Default private. public-read
+}
+
+type SwiftConfig struct {
+	APIUser  string `toml:"api_user"`
+	APIKey   string `toml:"api_key"`
+	AuthURL  string `toml:"auth_url"`
+	Tenant   string `toml:"tenant"`
+	TenantID string `toml:"tenant_id"`
+	Region string	`toml:"region"`
+	Container string	`toml:"container"`
 }
 
 func (c *Config) StorageType() string {
 	if c.S3 != nil {
 		return "s3"
+	}
+	if c.Swift != nil {
+		return "swift"
 	}
 	return ""
 }

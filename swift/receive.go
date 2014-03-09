@@ -1,26 +1,14 @@
-/*
-Copyright 2011 Google Inc.
-Modifications Copyright (c) 2014 Simon Zimmermann
+// Copyright 2014 Simon Zimmermann. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package s3
+package swift
 
 import (
 	"bytes"
 	"crypto/md5"
 	"errors"
+	"fmt"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -33,11 +21,11 @@ import (
 
 const maxInMemorySlurp = 8 << 20 // 8MB.
 
-// amazonSlurper slurps up a blob to memory (or spilling to disk if
+// swiftSlurper slurps up a blob to memory (or spilling to disk if
 // over maxInMemorySlurp) to verify its digest (and also gets its MD5
 // for Amazon's Content-MD5 header, even if the original blobref
 // is e.g. sha1-xxxx)
-type amazonSlurper struct {
+type swiftSlurper struct {
 	blob    blob.Ref // only used for tempfile's prefix
 	buf     *bytes.Buffer
 	md5     hash.Hash
@@ -45,15 +33,15 @@ type amazonSlurper struct {
 	reading bool     // transitions at most once from false -> true
 }
 
-func newAmazonSlurper(blob blob.Ref) *amazonSlurper {
-	return &amazonSlurper{
+func newSwiftSlurper(blob blob.Ref) *swiftSlurper {
+	return &swiftSlurper{
 		blob: blob,
 		buf:  new(bytes.Buffer),
 		md5:  md5.New(),
 	}
 }
 
-func (as *amazonSlurper) Read(p []byte) (n int, err error) {
+func (as *swiftSlurper) Read(p []byte) (n int, err error) {
 	if !as.reading {
 		as.reading = true
 		if as.file != nil {
@@ -66,7 +54,7 @@ func (as *amazonSlurper) Read(p []byte) (n int, err error) {
 	return as.buf.Read(p)
 }
 
-func (as *amazonSlurper) Write(p []byte) (n int, err error) {
+func (as *swiftSlurper) Write(p []byte) (n int, err error) {
 	if as.reading {
 		panic("write after read")
 	}
@@ -93,14 +81,14 @@ func (as *amazonSlurper) Write(p []byte) (n int, err error) {
 	return as.buf.Write(p)
 }
 
-func (as *amazonSlurper) Cleanup() {
+func (as *swiftSlurper) Cleanup() {
 	if as.file != nil {
 		os.Remove(as.file.Name())
 	}
 }
 
-func (sto *s3Storage) ReceiveBlob(b blob.Ref, source io.Reader) (sr blob.SizedRef, err error) {
-	slurper := newAmazonSlurper(b)
+func (sto *swiftStorage) ReceiveBlob(b blob.Ref, source io.Reader) (sr blob.SizedRef, err error) {
+	slurper := newSwiftSlurper(b)
 	defer slurper.Cleanup()
 
 	size, err := io.Copy(slurper, source)
@@ -108,7 +96,8 @@ func (sto *s3Storage) ReceiveBlob(b blob.Ref, source io.Reader) (sr blob.SizedRe
 		return sr, err
 	}
 
-	err = sto.s3Client.PutObject(b.String(), sto.bucket, slurper.md5, size, slurper)
+	hash := fmt.Sprintf("%x", slurper.md5.Sum(nil))
+	_, err = sto.conn.ObjectPut(sto.container, b.String(), slurper, false, hash, "", nil)
 	if err != nil {
 		return sr, err
 	}
