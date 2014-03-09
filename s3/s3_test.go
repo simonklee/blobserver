@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/simonz05/blobserver"
-	"github.com/simonz05/blobserver/storagetest"
 	"github.com/simonz05/blobserver/config"
+	"github.com/simonz05/blobserver/storagetest"
 )
 
 func TestS3(t *testing.T) {

@@ -68,6 +68,7 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 			Hostname:        hostname,
 		},
 		HTTPClient: http.DefaultClient,
+		DefaultACL: s3conf.DefaultACL,
 	}
 	sto := &s3Storage{
 		s3Client: client,

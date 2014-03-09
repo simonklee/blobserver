@@ -18,6 +18,7 @@ type S3Config struct {
 	AccessKey       string `toml:"aws_access_key"`
 	SecretAccessKey string `toml:"aws_secret_access_key"`
 	Bucket          string
+	DefaultACL      string `toml:"aws_default_acl"` // optional. Default private. public-read
 }
 
 func (c *Config) StorageType() string {
