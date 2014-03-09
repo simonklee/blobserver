@@ -22,19 +22,6 @@ import (
 	"testing"
 )
 
-func TestStatResponse(t *testing.T) {
-	res := &StatResponse{
-		CanLongPoll: true,
-	}
-	enc, err := json.MarshalIndent(res, "  ", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := string(enc); !strings.Contains(got, `"stat": []`) {
-		t.Errorf("Wanted stat to have value []; got %s", got)
-	}
-}
-
 func TestUploadResponse(t *testing.T) {
 	res := &UploadResponse{}
 	enc, err := json.MarshalIndent(res, "  ", "")

@@ -28,23 +28,6 @@ type RefAndSize struct {
 	Size uint32   `json:"size"`
 }
 
-// StatResponse is the JSON document returned from the blob batch stat
-// handler.
-//
-// See doc/protocol/blob-stat-protocol.txt.
-type StatResponse struct {
-	Stat        []*RefAndSize `json:"stat"`
-	CanLongPoll bool          `json:"canLongPoll"` // TODO: move this to discovery?
-}
-
-func (p *StatResponse) MarshalJSON() ([]byte, error) {
-	v := *p
-	if v.Stat == nil {
-		v.Stat = []*RefAndSize{}
-	}
-	return json.Marshal(v)
-}
-
 // UploadResponse is the JSON document returned from the blob batch
 // upload handler.
 //
