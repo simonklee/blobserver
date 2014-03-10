@@ -4,5 +4,3 @@
     - swift: connection pooling/thread-safe Connection.
 
     - swift: shard objects across containers.
-
-    - swift: set/expose ACL on objects 

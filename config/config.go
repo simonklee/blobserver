@@ -23,13 +23,14 @@ type S3Config struct {
 }
 
 type SwiftConfig struct {
-	APIUser  string `toml:"api_user"`
-	APIKey   string `toml:"api_key"`
-	AuthURL  string `toml:"auth_url"`
-	Tenant   string `toml:"tenant"`
-	TenantID string `toml:"tenant_id"`
-	Region string	`toml:"region"`
-	Container string	`toml:"container"`
+	APIUser          string `toml:"api_user"`
+	APIKey           string `toml:"api_key"`
+	AuthURL          string `toml:"auth_url"`
+	Tenant           string `toml:"tenant"`
+	TenantID         string `toml:"tenant_id"`
+	Region           string `toml:"region"`
+	Container        string `toml:"container"`
+	ContainerReadACL string `toml:"container_read_acl"`
 }
 
 func (c *Config) StorageType() string {

@@ -16,8 +16,9 @@ import (
 )
 
 type swiftStorage struct {
-	conn      *swift.Connection
-	container string
+	conn             *swift.Connection
+	container        string
+	containerReadACL string
 }
 
 func (s *swiftStorage) String() string {
@@ -35,9 +36,15 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 		Tenant:   swiftConf.Tenant,
 		//TenantId: swiftConf.TenantID,
 	}
+
 	sto := &swiftStorage{
-		conn:      conn,
-		container: swiftConf.Container,
+		conn:             conn,
+		container:        swiftConf.Container,
+		containerReadACL: ".r:*,.rlistings",
+	}
+
+	if swiftConf.ContainerReadACL != "" {
+		sto.containerReadACL = swiftConf.ContainerReadACL
 	}
 
 	err := sto.conn.Authenticate()

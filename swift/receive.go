@@ -7,15 +7,13 @@ package swift
 import (
 	"bytes"
 	"crypto/md5"
-	"errors"
 	"fmt"
 	"hash"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
-	"strconv"
 
+	"github.com/ncw/swift"
 	"github.com/simonz05/blobserver/blob"
 )
 
@@ -97,8 +95,22 @@ func (sto *swiftStorage) ReceiveBlob(b blob.Ref, source io.Reader) (sr blob.Size
 	}
 
 	hash := fmt.Sprintf("%x", slurper.md5.Sum(nil))
+	max_retry := 1
+Retry:
 	_, err = sto.conn.ObjectPut(sto.container, b.String(), slurper, false, hash, "", nil)
+
 	if err != nil {
+		// we assume both of these mean container not found in this context
+		if (err == swift.ObjectNotFound || err == swift.ContainerNotFound) && max_retry > 0 {
+			max_retry--
+			h := make(swift.Headers)
+			h["X-Container-Read"] = sto.containerReadACL
+			err = sto.conn.ContainerCreate(sto.container, h)
+			if err != nil {
+				return sr, err
+			}
+			goto Retry
+		}
 		return sr, err
 	}
 	return blob.SizedRef{Ref: b, Size: uint32(size)}, nil
