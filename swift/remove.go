@@ -19,7 +19,7 @@ func (sto *swiftStorage) RemoveBlobs(blobs []blob.Ref) error {
 		removeGate.Start()
 		wg.Go(func() error {
 			defer removeGate.Done()
-			return sto.conn.ObjectDelete(sto.container, blob.String())
+			return sto.conn.ObjectDelete(sto.container(blob), blob.String())
 		})
 	}
 	return wg.Err()

@@ -2,5 +2,3 @@
     - all: store objects with file extensions for their respective Content Type
 
     - swift: connection pooling/thread-safe Connection.
-
-    - swift: shard objects across containers.

@@ -31,6 +31,7 @@ type SwiftConfig struct {
 	Region           string `toml:"region"`
 	Container        string `toml:"container"`
 	ContainerReadACL string `toml:"container_read_acl"`
+	Shard            bool   `toml:"shard"`
 }
 
 func (c *Config) StorageType() string {

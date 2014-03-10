@@ -23,7 +23,7 @@ func getInt64FromHeader(headers map[string]string, header string) (result int64,
 }
 
 func (sto *swiftStorage) FetchStreaming(blob blob.Ref) (file io.ReadCloser, size uint32, err error) {
-	f, h, err := sto.conn.ObjectOpen(sto.container, blob.String(), true, nil)
+	f, h, err := sto.conn.ObjectOpen(sto.container(blob), blob.String(), true, nil)
 	if err != nil {
 		return
 	}

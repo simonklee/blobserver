@@ -12,17 +12,28 @@ import (
 
 	"github.com/ncw/swift"
 	"github.com/simonz05/blobserver"
+	"github.com/simonz05/blobserver/blob"
 	"github.com/simonz05/blobserver/config"
 )
 
 type swiftStorage struct {
 	conn             *swift.Connection
-	container        string
+	containerName    string
+	shard            bool
 	containerReadACL string
+	config           *config.SwiftConfig
 }
 
 func (s *swiftStorage) String() string {
 	return fmt.Sprintf("\"swift\" blob storage at host %q, container %q", s.conn.AuthUrl, s.container)
+}
+
+func (s *swiftStorage) container(b blob.Ref) string {
+	if !s.shard {
+		return s.containerName
+	}
+
+	return shards[b.Sum32()%uint32(shardCount)]
 }
 
 func newFromConfig(config *config.Config) (blobserver.Storage, error) {
@@ -39,8 +50,10 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 
 	sto := &swiftStorage{
 		conn:             conn,
-		container:        swiftConf.Container,
+		shard:            swiftConf.Shard,
+		containerName:    swiftConf.Container,
 		containerReadACL: ".r:*,.rlistings",
+		config:           swiftConf,
 	}
 
 	if swiftConf.ContainerReadACL != "" {
@@ -54,6 +67,13 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 	return sto, nil
 }
 
+const shardCount = 2 // 8<<5
+
+var shards [shardCount]string
+
 func init() {
+	for i := range shards {
+		shards[i] = fmt.Sprintf("%0.2X", i)
+	}
 	blobserver.RegisterStorageConstructor("swift", blobserver.StorageConstructor(newFromConfig))
 }

@@ -23,7 +23,7 @@ func (sto *swiftStorage) StatBlobs(dest chan<- blob.SizedRef, blobs []blob.Ref) 
 		wg.Go(func() error {
 			defer statGate.Done()
 
-			info, _, err := sto.conn.Object(sto.container, br.String())
+			info, _, err := sto.conn.Object(sto.container(br), br.String())
 
 			if err == nil {
 				dest <- blob.SizedRef{Ref: br, Size: uint32(info.Bytes)}

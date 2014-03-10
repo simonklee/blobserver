@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	//"time"
 
 	"github.com/ncw/swift"
 	"github.com/simonz05/blobserver/blob"
@@ -26,6 +27,7 @@ const maxInMemorySlurp = 8 << 20 // 8MB.
 type swiftSlurper struct {
 	blob    blob.Ref // only used for tempfile's prefix
 	buf     *bytes.Buffer
+	r       *bytes.Reader
 	md5     hash.Hash
 	file    *os.File // nil until allocated
 	reading bool     // transitions at most once from false -> true
@@ -49,7 +51,20 @@ func (as *swiftSlurper) Read(p []byte) (n int, err error) {
 	if as.file != nil {
 		return as.file.Read(p)
 	}
-	return as.buf.Read(p)
+	if as.r == nil {
+		as.r = bytes.NewReader(as.buf.Bytes())
+	}
+	return as.r.Read(p)
+}
+
+func (as *swiftSlurper) Seek(offset int64, whence int) (int64, error) {
+	if as.file != nil {
+		return as.file.Seek(offset, whence)
+	}
+	if as.r != nil {
+		return as.r.Seek(offset, whence)
+	}
+	return offset, nil
 }
 
 func (as *swiftSlurper) Write(p []byte) (n int, err error) {
@@ -90,28 +105,28 @@ func (sto *swiftStorage) ReceiveBlob(b blob.Ref, source io.Reader) (sr blob.Size
 	defer slurper.Cleanup()
 
 	size, err := io.Copy(slurper, source)
+
 	if err != nil {
 		return sr, err
 	}
 
 	hash := fmt.Sprintf("%x", slurper.md5.Sum(nil))
-	max_retry := 1
+	retries := 1
 Retry:
-	_, err = sto.conn.ObjectPut(sto.container, b.String(), slurper, false, hash, "", nil)
+	_, err = sto.conn.ObjectPut(sto.container(b), b.String(), slurper, false, hash, "", nil)
 
 	if err != nil {
-		// we assume both of these mean container not found in this context
-		if (err == swift.ObjectNotFound || err == swift.ContainerNotFound) && max_retry > 0 {
-			max_retry--
+		// assume both of these mean container not found in this context
+		if (err == swift.ObjectNotFound || err == swift.ContainerNotFound) && retries > 0 {
+			retries--
 			h := make(swift.Headers)
 			h["X-Container-Read"] = sto.containerReadACL
-			err = sto.conn.ContainerCreate(sto.container, h)
-			if err != nil {
-				return sr, err
-			}
+			err = sto.conn.ContainerCreate(sto.container(b), h)
+			slurper.Seek(0, 0)
 			goto Retry
+		} else {
+			return sr, err
 		}
-		return sr, err
 	}
 	return blob.SizedRef{Ref: b, Size: uint32(size)}, nil
 }
