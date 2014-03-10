@@ -33,7 +33,7 @@ func (s *swiftStorage) container(b blob.Ref) string {
 		return s.containerName
 	}
 
-	return shards[b.Sum32()%uint32(shardCount)]
+	return fmt.Sprintf("%s-%s", s.containerName, shards[b.Sum32()%uint32(shardCount)])
 }
 
 func newFromConfig(config *config.Config) (blobserver.Storage, error) {
