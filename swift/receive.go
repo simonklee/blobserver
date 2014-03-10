@@ -41,62 +41,62 @@ func newSwiftSlurper(blob blob.Ref) *swiftSlurper {
 	}
 }
 
-func (as *swiftSlurper) Read(p []byte) (n int, err error) {
-	if !as.reading {
-		as.reading = true
-		if as.file != nil {
-			as.file.Seek(0, 0)
+func (ss *swiftSlurper) Read(p []byte) (n int, err error) {
+	if !ss.reading {
+		ss.reading = true
+		if ss.file != nil {
+			ss.file.Seek(0, 0)
 		}
 	}
-	if as.file != nil {
-		return as.file.Read(p)
+	if ss.file != nil {
+		return ss.file.Read(p)
 	}
-	if as.r == nil {
-		as.r = bytes.NewReader(as.buf.Bytes())
+	if ss.r == nil {
+		ss.r = bytes.NewReader(ss.buf.Bytes())
 	}
-	return as.r.Read(p)
+	return ss.r.Read(p)
 }
 
-func (as *swiftSlurper) Seek(offset int64, whence int) (int64, error) {
-	if as.file != nil {
-		return as.file.Seek(offset, whence)
+func (ss *swiftSlurper) Seek(offset int64, whence int) (int64, error) {
+	if ss.file != nil {
+		return ss.file.Seek(offset, whence)
 	}
-	if as.r != nil {
-		return as.r.Seek(offset, whence)
+	if ss.r != nil {
+		return ss.r.Seek(offset, whence)
 	}
 	return offset, nil
 }
 
-func (as *swiftSlurper) Write(p []byte) (n int, err error) {
-	if as.reading {
+func (ss *swiftSlurper) Write(p []byte) (n int, err error) {
+	if ss.reading {
 		panic("write after read")
 	}
-	as.md5.Write(p)
-	if as.file != nil {
-		n, err = as.file.Write(p)
+	ss.md5.Write(p)
+	if ss.file != nil {
+		n, err = ss.file.Write(p)
 		return
 	}
 
-	if as.buf.Len()+len(p) > maxInMemorySlurp {
-		as.file, err = ioutil.TempFile("", as.blob.String())
+	if ss.buf.Len()+len(p) > maxInMemorySlurp {
+		ss.file, err = ioutil.TempFile("", ss.blob.String())
 		if err != nil {
 			return
 		}
-		_, err = io.Copy(as.file, as.buf)
+		_, err = io.Copy(ss.file, ss.buf)
 		if err != nil {
 			return
 		}
-		as.buf = nil
-		n, err = as.file.Write(p)
+		ss.buf = nil
+		n, err = ss.file.Write(p)
 		return
 	}
 
-	return as.buf.Write(p)
+	return ss.buf.Write(p)
 }
 
-func (as *swiftSlurper) Cleanup() {
-	if as.file != nil {
-		os.Remove(as.file.Name())
+func (ss *swiftSlurper) Cleanup() {
+	if ss.file != nil {
+		os.Remove(ss.file.Name())
 	}
 }
 
