@@ -4,5 +4,8 @@
 
 package blobserver
 
-// MaxBlobSize is the max size of a single blob. 16MB
-const MaxBlobSize = 16 << 20
+// MaxBlobSize is the max size of a single blob.
+const MaxBlobSize = 128 << 20
+
+// MaxInMemory is max size of a blob before we use a temporary disk file
+const MaxInMemory = 8 << 20

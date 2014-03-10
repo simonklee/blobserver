@@ -20,18 +20,14 @@ package s3
 import (
 	"bytes"
 	"crypto/md5"
-	"errors"
 	"hash"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
-	"strconv"
 
+	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"
 )
-
-const maxInMemorySlurp = 8 << 20 // 8MB.
 
 // amazonSlurper slurps up a blob to memory (or spilling to disk if
 // over maxInMemorySlurp) to verify its digest (and also gets its MD5
@@ -76,7 +72,7 @@ func (as *amazonSlurper) Write(p []byte) (n int, err error) {
 		return
 	}
 
-	if as.buf.Len()+len(p) > maxInMemorySlurp {
+	if as.buf.Len()+len(p) > blobserver.MaxInMemory {
 		as.file, err = ioutil.TempFile("", as.blob.String())
 		if err != nil {
 			return

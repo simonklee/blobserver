@@ -15,15 +15,12 @@ import (
 	//"time"
 
 	"github.com/ncw/swift"
+	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"
 )
 
-const maxInMemorySlurp = 8 << 20 // 8MB.
-
 // swiftSlurper slurps up a blob to memory (or spilling to disk if
-// over maxInMemorySlurp) to verify its digest (and also gets its MD5
-// for Amazon's Content-MD5 header, even if the original blobref
-// is e.g. sha1-xxxx)
+// over MaxInMemory) to verify its digest.
 type swiftSlurper struct {
 	blob    blob.Ref // only used for tempfile's prefix
 	buf     *bytes.Buffer
@@ -77,7 +74,7 @@ func (ss *swiftSlurper) Write(p []byte) (n int, err error) {
 		return
 	}
 
-	if ss.buf.Len()+len(p) > maxInMemorySlurp {
+	if ss.buf.Len()+len(p) > blobserver.MaxInMemory {
 		ss.file, err = ioutil.TempFile("", ss.blob.String())
 		if err != nil {
 			return
