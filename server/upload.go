@@ -81,13 +81,7 @@ func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiv
 			break
 		}
 
-		formName := params["name"]
-		ref, ok := blob.Parse(formName)
-		if !ok {
-			addError(fmt.Sprintf("Ignoring form key %q", formName))
-			continue
-		}
-
+		ref := blob.NewRef(params["name"])
 		var tooBig int64 = blobserver.MaxBlobSize + 1
 		var readBytes int64
 		blobGot, err := blobReceiver.ReceiveBlob(ref, &readerutil.CountingReader{
