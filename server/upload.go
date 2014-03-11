@@ -18,7 +18,6 @@ limitations under the License.
 package server
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"mime"
@@ -35,29 +34,21 @@ import (
 // CreateUploadHandler returns the handler that receives multi-part form uploads
 func newUploadHandler(storage blobserver.Storage) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handleMultiPartUpload(w, r, storage)
+		err := handleMultiPartUpload(w, r, storage)
+		if err != nil {
+			httputil.ServeJSONError(w, err)
+		}
 	})
 }
 
-func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiver blobserver.Storage) {
+func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiver blobserver.Storage) error {
 	res := new(protocol.UploadResponse)
 
 	receivedBlobs := make([]blob.SizedRef, 0, 10)
 
 	multipart, err := req.MultipartReader()
 	if multipart == nil {
-		httputil.BadRequestError(rw, fmt.Sprintf(
-			"Expected multipart/form-data POST request; %v", err))
-		return
-	}
-
-	var errBuf bytes.Buffer
-	addError := func(s string) {
-		log.Printf("Client error: %s", s)
-		if errBuf.Len() > 0 {
-			errBuf.WriteByte('\n')
-		}
-		errBuf.WriteString(s)
+		return newHttpError(fmt.Sprintf("Expected multipart/form-data POST request; %v", err), 400)
 	}
 
 	for {
@@ -66,19 +57,16 @@ func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiv
 			break
 		}
 		if err != nil {
-			addError(fmt.Sprintf("Error reading multipart section: %v", err))
-			break
+			return newHttpError(fmt.Sprintf("Error reading multipart section: %v", err), 400)
 		}
 
 		contentDisposition, params, err := mime.ParseMediaType(mimePart.Header.Get("Content-Disposition"))
 		if err != nil {
-			addError("invalid Content-Disposition")
-			break
+			return newHttpError("invalid Content-Disposition", 400)
 		}
 
 		if contentDisposition != "form-data" {
-			addError(fmt.Sprintf("Expected Content-Disposition of \"form-data\"; got %q", contentDisposition))
-			break
+			return newHttpError(fmt.Sprintf("Expected Content-Disposition of \"form-data\"; got %q", contentDisposition), 400)
 		}
 
 		ref := blob.NewRef(params["name"])
@@ -92,8 +80,7 @@ func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiv
 			err = fmt.Errorf("blob over the limit of %d bytes", blobserver.MaxBlobSize)
 		}
 		if err != nil {
-			addError(fmt.Sprintf("Error receiving blob %v: %v\n", ref, err))
-			break
+			return newHttpError(fmt.Sprintf("Error receiving blob %v: %v\n", ref, err), 400)
 		}
 		log.Printf("Received blob %v\n", blobGot)
 		receivedBlobs = append(receivedBlobs, blobGot)
@@ -106,6 +93,6 @@ func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiv
 		})
 	}
 
-	res.ErrorText = errBuf.String()
 	httputil.ReturnJSONCode(rw, 201, res)
+	return nil
 }

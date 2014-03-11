@@ -25,17 +25,15 @@ import (
 )
 
 type RefAndSize struct {
-	Ref  blob.Ref `json:"blobRef"`
+	Ref  blob.Ref `json:"path"`
 	Size uint32   `json:"size"`
 }
 
 // UploadResponse is the JSON document returned from the blob batch
 // upload handler.
-//
-// See doc/protocol/blob-upload-protocol.txt.
 type UploadResponse struct {
-	Received  []*RefAndSize `json:"received"`
-	ErrorText string        `json:"errortext,omitempty"`
+	Received []*RefAndSize     `json:"Data"`
+	Error    map[string]string `json:"Error,omitempty"`
 }
 
 func (p *UploadResponse) MarshalJSON() ([]byte, error) {

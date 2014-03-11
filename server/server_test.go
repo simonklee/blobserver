@@ -73,13 +73,13 @@ func TestServer(t *testing.T) {
 			t.Fatalf("err sending request #%d - %v", i, err)
 		}
 
-		ast.Equal(res.StatusCode, 201)
 		ur := new(protocol.UploadResponse)
 		parseResponse(t, res, ur)
-		ast.Equal(len(ur.Received), 1)
+		ast.Equal(201, res.StatusCode)
+		ast.Equal(1, len(ur.Received))
 		br1 := ur.Received[0]
 
-		ast.Equal(br1.Size, len(v))
+		ast.Equal(len(v), br1.Size)
 		ast.True(len(br1.Ref.String()) > 0)
 
 		blobRefs = append(blobRefs, br1.Ref)
@@ -152,7 +152,7 @@ func parseResponse(t *testing.T, res *http.Response, v interface{}) {
 	reader := bufio.NewReader(res.Body)
 	buf, _ := ioutil.ReadAll(reader)
 	err := json.Unmarshal(buf, v)
-	//fmt.Printf("%s\n", buf)
+	fmt.Printf("%s\n", buf)
 	//err := json.NewDecoder(res.Body).Decode(v)
 
 	if err != nil {
