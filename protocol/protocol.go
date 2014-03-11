@@ -47,7 +47,7 @@ func (p *UploadResponse) MarshalJSON() ([]byte, error) {
 // RemoveResponse is the JSON document returned from the blob batch
 // remove handler.
 type RemoveResponse struct {
-	Removed []blob.Ref     `json:"Data"`
+	Removed []blob.Ref        `json:"Data"`
 	Error   map[string]string `json:"Error,omitempty"`
 }
 

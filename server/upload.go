@@ -31,8 +31,8 @@ import (
 	"github.com/simonz05/util/readerutil"
 )
 
-// CreateUploadHandler returns the handler that receives multi-part form uploads
-func newUploadHandler(storage blobserver.Storage) http.Handler {
+// createUploadHandler returns the handler that receives multi-part form uploads.
+func createUploadHandler(storage blobserver.Storage) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := handleMultiPartUpload(w, r, storage)
 		if err != nil {
@@ -43,11 +43,10 @@ func newUploadHandler(storage blobserver.Storage) http.Handler {
 
 func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiver blobserver.Storage) error {
 	res := new(protocol.UploadResponse)
-
-	receivedBlobs := make([]blob.SizedRef, 0, 10)
-
+	receivedBlobs := make([]blob.SizedRef, 0, 4)
 	multipart, err := req.MultipartReader()
-	if multipart == nil {
+
+	if err != nil {
 		return newHttpError(fmt.Sprintf("Expected multipart/form-data POST request; %v", err), 400)
 	}
 

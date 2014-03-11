@@ -61,7 +61,7 @@ func TestServer(t *testing.T) {
 
 	for i, v := range contents {
 		filename := md5Hash(v)
-		req, err := multipartRequest("/", filename, v)
+		req, err := multipartRequest("/upload/", filename, v)
 
 		if err != nil {
 			t.Fatalf("err creating request #%d - %v", i, err)
@@ -89,7 +89,7 @@ func TestServer(t *testing.T) {
 	t.Logf("test remove")
 
 	for i, v := range blobRefs {
-		url := absURL(fmt.Sprintf("/%s/", v), nil)
+		url := absURL(fmt.Sprintf("/remove/%s/", v), nil)
 		req, err := http.NewRequest("DELETE", url, nil)
 
 		if err != nil {
@@ -101,7 +101,6 @@ func TestServer(t *testing.T) {
 		if err != nil {
 			t.Fatalf("err sending request #%d - %v", i, err)
 		}
-		fmt.Println(res.Status)
 
 		ur := new(protocol.RemoveResponse)
 		parseResponse(t, res, ur)

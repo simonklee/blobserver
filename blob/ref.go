@@ -29,7 +29,7 @@ import (
 
 // Ref is a reference to a blob.
 type Ref struct {
-	Id string
+	id string
 }
 
 func NewRef(name string) Ref {
@@ -46,16 +46,16 @@ func NewRef(name string) Ref {
 	buf = append(buf, id.String()...)
 	buf = append(buf, '.')
 	buf = append(buf, ext...)
-	return Ref{Id: string(buf)}
+	return Ref{id: string(buf)}
 }
 
 func (r Ref) String() string {
-	return r.Id
+	return r.id
 }
 
 func (r Ref) Sum32() uint32 {
 	var v uint32
-	for _, b := range r.Id[:4] {
+	for _, b := range r.id[:4] {
 		v = v<<8 | uint32(b)
 	}
 	return v
@@ -72,7 +72,7 @@ func (r *Ref) UnmarshalJSON(d []byte) error {
 		return fmt.Errorf("blob: expecting a JSON string to unmarshal, got %q", d)
 	}
 	d = d[1 : len(d)-1]
-	r.Id = string(d)
+	r.id = string(d)
 	return nil
 }
 
@@ -83,6 +83,14 @@ func (r Ref) MarshalJSON() ([]byte, error) {
 	buf = append(buf, r.String()...)
 	buf = append(buf, '"')
 	return buf, nil
+}
+
+func Parse(id string) (r Ref, ok bool) {
+	if len(id) == 0 {
+		return r, false
+	}
+	r.id = id
+	return r, true
 }
 
 // SizedRef is like a Ref but includes a size.

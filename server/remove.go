@@ -31,7 +31,8 @@ import (
 
 const maxRemovesPerRequest = 1000
 
-func newBatchRemoveHandler(storage blobserver.Storage) http.Handler {
+// createBatchRemoveHandler returns the handler that removes blobs
+func createBatchRemoveHandler(storage blobserver.Storage) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := handleBatchRemove(w, r, storage)
 		if err != nil {
@@ -40,10 +41,17 @@ func newBatchRemoveHandler(storage blobserver.Storage) http.Handler {
 	})
 }
 
+// createRemoveHandler returns the handler that removes blob a single blob at path
+func createRemoveHandler(storage blobserver.Storage) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := handleRemove(w, r, storage)
+		if err != nil {
+			httputil.ServeJSONError(w, err)
+		}
+	})
+}
+
 func handleBatchRemove(w http.ResponseWriter, req *http.Request, storage blobserver.Storage) error {
-	if req.Method != "POST" {
-		log.Fatalf("Invalid method; handlers misconfigured")
-	}
 	res := new(protocol.RemoveResponse)
 	n := 0
 	toRemove := make([]blob.Ref, 0)
@@ -51,17 +59,18 @@ func handleBatchRemove(w http.ResponseWriter, req *http.Request, storage blobser
 	for {
 		n++
 		if n > maxRemovesPerRequest {
-			return newHttpError(fmt.Sprintf("Too many removes in this request; max is %d", maxRemovesPerRequest), 400)
+			return newHttpError(fmt.Sprintf(
+				"Too many removes in this request; max is %d", maxRemovesPerRequest), 400)
 		}
 
 		key := fmt.Sprintf("blob%v", n)
 		value := req.FormValue(key)
+		ref, ok := blob.Parse(value)
 
-		if value == "" {
+		if !ok {
 			break
 		}
 
-		ref := blob.Ref{Id: value}
 		toRemove = append(toRemove, ref)
 	}
 
@@ -77,28 +86,22 @@ func handleBatchRemove(w http.ResponseWriter, req *http.Request, storage blobser
 	return nil
 }
 
-func newRemoveHandler(storage blobserver.Storage) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := handleRemove(w, r, storage)
-		if err != nil {
-			httputil.ServeJSONError(w, err)
-		}
-	})
-}
-
 func handleRemove(w http.ResponseWriter, req *http.Request, storage blobserver.Storage) error {
 	res := new(protocol.RemoveResponse)
 	vars := mux.Vars(req)
-	value := vars["ResourceID"]
-	ref := blob.Ref{Id: value}
+	ref, ok := blob.Parse(vars["blobRef"])
+	if !ok {
+		return newHttpError("Invalid blob ref", 400)
+	}
 	toRemove := []blob.Ref{ref}
 	err := storage.RemoveBlobs(toRemove)
 
 	if err != nil {
 		log.Errorf("Server error during remove: %v", err)
-		return newHttpError("Server error", http.StatusInternalServerError)
+		return newHttpError("Server error", 500)
 	}
 
+	res.Removed = toRemove
 	httputil.ReturnJSON(w, res)
 	return nil
 }
