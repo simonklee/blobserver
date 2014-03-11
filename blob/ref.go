@@ -19,6 +19,7 @@ limitations under the License.
 package blob
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
@@ -58,6 +59,30 @@ func (r Ref) Sum32() uint32 {
 		v = v<<8 | uint32(b)
 	}
 	return v
+}
+
+var null = []byte(`null`)
+
+// UnmarshalJSON implements Go's encoding.json.Unmarshaler interface
+func (r *Ref) UnmarshalJSON(d []byte) error {
+	if len(d) == 0 || bytes.Equal(d, null) {
+		return nil
+	}
+	if len(d) < 2 || d[0] != '"' || d[len(d)-1] != '"' {
+		return fmt.Errorf("blob: expecting a JSON string to unmarshal, got %q", d)
+	}
+	d = d[1 : len(d)-1]
+	r.id = string(d)
+	return nil
+}
+
+// MarshalJSON implements Go's encoding.json.Marshaler interface
+func (r Ref) MarshalJSON() ([]byte, error) {
+	buf := make([]byte, 0, 1+len(r.String())+1)
+	buf = append(buf, '"')
+	buf = append(buf, r.String()...)
+	buf = append(buf, '"')
+	return buf, nil
 }
 
 // SizedRef is like a Ref but includes a size.

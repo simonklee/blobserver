@@ -107,6 +107,5 @@ func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiv
 	}
 
 	res.ErrorText = errBuf.String()
-
-	httputil.ReturnJSON(rw, res)
+	httputil.ReturnJSONCode(rw, 201, res)
 }
