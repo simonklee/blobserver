@@ -61,7 +61,7 @@ func TestServer(t *testing.T) {
 
 	for i, v := range contents {
 		filename := md5Hash(v)
-		req, err := multipartRequest("/upload/", filename, v)
+		req, err := multipartRequest("/", filename, v)
 
 		if err != nil {
 			t.Fatalf("err creating request #%d - %v", i, err)
@@ -84,6 +84,28 @@ func TestServer(t *testing.T) {
 
 		blobRefs = append(blobRefs, br1.Ref)
 		blobSizedRefs = append(blobSizedRefs, blob.SizedRef{br1.Ref, br1.Size})
+	}
+
+	t.Logf("test remove")
+
+	for i, v := range blobRefs {
+		url := absURL(fmt.Sprintf("/%s/", v), nil)
+		req, err := http.NewRequest("DELETE", url, nil)
+
+		if err != nil {
+			return
+		}
+
+		res, err := doReq(req)
+
+		if err != nil {
+			t.Fatalf("err sending request #%d - %v", i, err)
+		}
+		fmt.Println(res.Status)
+
+		ur := new(protocol.RemoveResponse)
+		parseResponse(t, res, ur)
+		ast.Equal(200, res.StatusCode)
 	}
 }
 
@@ -152,7 +174,7 @@ func parseResponse(t *testing.T, res *http.Response, v interface{}) {
 	reader := bufio.NewReader(res.Body)
 	buf, _ := ioutil.ReadAll(reader)
 	err := json.Unmarshal(buf, v)
-	fmt.Printf("%s\n", buf)
+	//fmt.Printf("%s\n", buf)
 	//err := json.NewDecoder(res.Body).Decode(v)
 
 	if err != nil {

@@ -6,6 +6,4 @@
 
     - server: add remove handler
 
-    - protocol: update protocol
-
     - swift: connection pooling/thread-safe Connection.

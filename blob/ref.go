@@ -29,7 +29,7 @@ import (
 
 // Ref is a reference to a blob.
 type Ref struct {
-	id string
+	Id string
 }
 
 func NewRef(name string) Ref {
@@ -46,16 +46,16 @@ func NewRef(name string) Ref {
 	buf = append(buf, id.String()...)
 	buf = append(buf, '.')
 	buf = append(buf, ext...)
-	return Ref{id: string(buf)}
+	return Ref{Id: string(buf)}
 }
 
 func (r Ref) String() string {
-	return r.id
+	return r.Id
 }
 
 func (r Ref) Sum32() uint32 {
 	var v uint32
-	for _, b := range r.id[:4] {
+	for _, b := range r.Id[:4] {
 		v = v<<8 | uint32(b)
 	}
 	return v
@@ -72,7 +72,7 @@ func (r *Ref) UnmarshalJSON(d []byte) error {
 		return fmt.Errorf("blob: expecting a JSON string to unmarshal, got %q", d)
 	}
 	d = d[1 : len(d)-1]
-	r.id = string(d)
+	r.Id = string(d)
 	return nil
 }
 

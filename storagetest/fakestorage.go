@@ -56,6 +56,7 @@ func (sto *fakeStorage) RemoveBlobs(blobs []blob.Ref) error {
 		if _, ok := sto.blobs[b.String()]; !ok {
 			return errors.New("Blob not found")
 		}
+		delete(sto.blobs, b.String())
 	}
 	return nil
 }

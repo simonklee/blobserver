@@ -21,7 +21,9 @@ import (
 func setupServer(storage blobserver.Storage) (err error) {
 	router := mux.NewRouter()
 	sub := router.PathPrefix("/v1/blob").Subrouter()
-	pat.Post(sub, "/upload/", newUploadHandler(storage))
+	pat.Post(sub, "/", newUploadHandler(storage))
+	pat.Post(sub, "/batch-remove/", newBatchRemoveHandler(storage))
+	pat.Delete(sub, `/{ResourceID:[[:alnum:]_\.-]+}/`, newRemoveHandler(storage))
 
 	router.StrictSlash(false)
 	// global middleware
