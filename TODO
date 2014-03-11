@@ -4,6 +4,4 @@
 
     - server: add stat handler
 
-    - server: add remove handler
-
     - swift: connection pooling/thread-safe Connection.
