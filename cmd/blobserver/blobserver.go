@@ -15,6 +15,8 @@ import (
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/config"
 	"github.com/simonz05/blobserver/server"
+	_ "github.com/simonz05/blobserver/s3"
+	_ "github.com/simonz05/blobserver/swift"
 	"github.com/simonz05/util/log"
 )
 
