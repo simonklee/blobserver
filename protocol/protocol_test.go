@@ -29,7 +29,7 @@ func TestUploadResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := string(enc); !strings.Contains(got, `"received": []`) {
+	if got := string(enc); !strings.Contains(got, `"Data": []`) {
 		t.Errorf("Wanted received to have value []; got %s", got)
 	}
 }
