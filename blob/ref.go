@@ -37,14 +37,13 @@ func NewRef(name string) Ref {
 	ext := filepath.Ext(name)
 
 	if ext == "" {
-		ext = "bin"
+		ext = ".bin"
 	}
 
-	buf := getBuf(len(id) + 1 + len(ext))[:0]
+	buf := getBuf(len(id) + len(ext))[:0]
 	defer putBuf(buf)
 
 	buf = append(buf, id.String()...)
-	buf = append(buf, '.')
 	buf = append(buf, ext...)
 	return Ref{id: string(buf)}
 }

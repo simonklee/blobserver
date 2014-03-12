@@ -59,16 +59,15 @@ func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiv
 			return newHttpError(fmt.Sprintf("Error reading multipart section: %v", err), 400)
 		}
 
-		contentDisposition, params, err := mime.ParseMediaType(mimePart.Header.Get("Content-Disposition"))
+		contentDisposition, _, err := mime.ParseMediaType(mimePart.Header.Get("Content-Disposition"))
 		if err != nil {
-			return newHttpError("invalid Content-Disposition", 400)
+			return newHttpError("Invalid Content-Disposition", 400)
 		}
-
 		if contentDisposition != "form-data" {
 			return newHttpError(fmt.Sprintf("Expected Content-Disposition of \"form-data\"; got %q", contentDisposition), 400)
 		}
 
-		ref := blob.NewRef(params["name"])
+		ref := blob.NewRef(mimePart.FileName())
 		var tooBig int64 = blobserver.MaxBlobSize + 1
 		var readBytes int64
 		blobGot, err := blobReceiver.ReceiveBlob(ref, &readerutil.CountingReader{

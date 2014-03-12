@@ -81,6 +81,7 @@ func main() {
 			conf.StorageType(), err)
 	}
 
+	log.Printf("Using `%s` storage", conf.StorageType())
 	err = server.ListenAndServe(*laddr, storage)
 
 	if err != nil {

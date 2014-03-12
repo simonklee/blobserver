@@ -4,6 +4,8 @@
 
     - server: add stat handler
 
+    - server: add config handler
+
     - swift: connection pooling/thread-safe Connection.
 
     - third party: move third party libraries to source directory.

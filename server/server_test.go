@@ -61,7 +61,7 @@ func TestServer(t *testing.T) {
 
 	for i, v := range contents {
 		filename := md5Hash(v)
-		req, err := multipartRequest("/upload/", filename, v)
+		req, err := multipartRequest("/blob/upload/", filename, v)
 
 		if err != nil {
 			t.Fatalf("err creating request #%d - %v", i, err)
@@ -89,7 +89,7 @@ func TestServer(t *testing.T) {
 	t.Logf("test remove")
 
 	for i, v := range blobRefs {
-		url := absURL(fmt.Sprintf("/remove/%s/", v), nil)
+		url := absURL(fmt.Sprintf("/blob/remove/%s/", v), nil)
 		req, err := http.NewRequest("DELETE", url, nil)
 
 		if err != nil {
@@ -201,5 +201,5 @@ func absURL(endpoint string, args map[string]string) string {
 		params = fmt.Sprintf("?%s", values.Encode())
 	}
 
-	return fmt.Sprintf("http://%s/v1/blob%s%s", serverAddr, endpoint, params)
+	return fmt.Sprintf("http://%s/v1/blobserver%s%s", serverAddr, endpoint, params)
 }
