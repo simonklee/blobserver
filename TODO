@@ -5,3 +5,5 @@
     - server: add stat handler
 
     - swift: connection pooling/thread-safe Connection.
+
+    - third party: move third party libraries to source directory.
