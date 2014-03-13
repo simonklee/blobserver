@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/simonz05/blobserver/blob"
+	"github.com/simonz05/util/log"
 )
 
 // getInt64FromHeader is a helper function to decode int64 from header.
@@ -22,8 +23,10 @@ func getInt64FromHeader(headers map[string]string, header string) (result int64,
 	return
 }
 
-func (sto *swiftStorage) FetchStreaming(blob blob.Ref) (file io.ReadCloser, size uint32, err error) {
-	f, h, err := sto.conn.ObjectOpen(sto.container(blob), blob.String(), true, nil)
+func (sto *swiftStorage) FetchStreaming(br blob.Ref) (file io.ReadCloser, size uint32, err error) {
+	ref, cont := sto.refContainer(br)
+	log.Println("Fetch: ", ref, cont)
+	f, h, err := sto.conn.ObjectOpen(cont, ref, true, nil)
 	if err != nil {
 		return
 	}

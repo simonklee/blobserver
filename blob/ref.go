@@ -21,7 +21,6 @@ package blob
 import (
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/nu7hatch/gouuid"
 	"path/filepath"
@@ -29,8 +28,7 @@ import (
 
 // Ref is a reference to a blob.
 type Ref struct {
-	Ref  string `json:"Ref"`
-	Path string `json:"Path,omitempty"`
+	Path string `json:"Path"`
 }
 
 func NewRef(name string) Ref {
@@ -46,16 +44,16 @@ func NewRef(name string) Ref {
 
 	buf = append(buf, id.String()...)
 	buf = append(buf, ext...)
-	return Ref{Ref: string(buf)}
+	return Ref{Path: string(buf)}
 }
 
 func (r Ref) String() string {
-	return r.Ref
+	return r.Path
 }
 
 func (r Ref) Sum32() uint32 {
 	var v uint32
-	for _, b := range r.Ref[:4] {
+	for _, b := range r.Path[:4] {
 		v = v<<8 | uint32(b)
 	}
 	return v
@@ -67,13 +65,7 @@ func Parse(ref string) (r Ref, ok bool) {
 	if len(ref) == 0 {
 		return r, false
 	}
-	idx := strings.Index(ref, "/")
-	if idx > 0 && len(ref) > idx+1 {
-		r.Path = ref
-		r.Ref = ref[idx+1:]
-	} else {
-		r.Ref = ref
-	}
+	r.Path = ref
 	return r, true
 }
 

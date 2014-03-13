@@ -25,7 +25,6 @@ import (
 	"net/http"
 
 	"github.com/simonz05/blobserver"
-	"github.com/simonz05/blobserver/blob"
 	"github.com/simonz05/blobserver/config"
 	"github.com/simonz05/util/amazon/s3"
 )
@@ -38,10 +37,6 @@ type s3Storage struct {
 
 func (s *s3Storage) String() string {
 	return fmt.Sprintf("\"s3\" blob storage at host %q, bucket %q", s.hostname, s.bucket)
-}
-
-func (s *s3Storage) pathRef(b blob.Ref) string {
-	return s.bucket + "/" + b.String()
 }
 
 func newFromConfig(config *config.Config) (blobserver.Storage, error) {

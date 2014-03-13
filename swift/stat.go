@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/simonz05/blobserver/blob"
+	"github.com/simonz05/util/log"
 	"github.com/simonz05/util/syncutil"
 )
 
@@ -22,8 +23,9 @@ func (sto *swiftStorage) StatBlobs(dest chan<- blob.SizedRef, blobs []blob.Ref) 
 		statGate.Start()
 		wg.Go(func() error {
 			defer statGate.Done()
-
-			info, _, err := sto.conn.Object(sto.container(br), br.String())
+			ref, cont := sto.refContainer(br)
+			log.Println("Stat:", cont, ref)
+			info, _, err := sto.conn.Object(cont, ref)
 
 			if err == nil {
 				dest <- blob.SizedRef{Ref: br, Size: uint32(info.Bytes)}

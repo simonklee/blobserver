@@ -17,6 +17,7 @@ import (
 	"github.com/ncw/swift"
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"
+	"github.com/simonz05/util/log"
 )
 
 // swiftSlurper slurps up a blob to memory (or spilling to disk if
@@ -126,6 +127,7 @@ retry:
 		}
 		return sr, err
 	}
-	b.Path = sto.pathRef(b)
-	return blob.SizedRef{Ref: b, Size: uint32(size)}, nil
+	ref := sto.createPathRef(b)
+	log.Println("Create: ", ref)
+	return blob.SizedRef{Ref: ref, Size: uint32(size)}, nil
 }

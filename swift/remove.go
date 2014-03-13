@@ -5,7 +5,10 @@
 package swift
 
 import (
+	"fmt"
+
 	"github.com/simonz05/blobserver/blob"
+	"github.com/simonz05/util/log"
 	"github.com/simonz05/util/syncutil"
 )
 
@@ -13,13 +16,16 @@ var removeGate = syncutil.NewGate(20) // arbitrary
 
 func (sto *swiftStorage) RemoveBlobs(blobs []blob.Ref) error {
 	var wg syncutil.Group
+	fmt.Println("START REMOVE")
 
-	for _, blob := range blobs {
-		blob := blob
+	for _, br := range blobs {
+		br := br
 		removeGate.Start()
 		wg.Go(func() error {
 			defer removeGate.Done()
-			return sto.conn.ObjectDelete(sto.container(blob), blob.String())
+			ref, cont := sto.refContainer(br)
+			log.Println("Remove: ", cont, ref)
+			return sto.conn.ObjectDelete(cont, ref)
 		})
 	}
 	return wg.Err()

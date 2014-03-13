@@ -9,6 +9,7 @@ package swift
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ncw/swift"
 	"github.com/simonz05/blobserver"
@@ -36,8 +37,19 @@ func (s *swiftStorage) container(b blob.Ref) string {
 	return fmt.Sprintf("%s-%s", s.containerName, shards[b.Sum32()%uint32(shardCount)])
 }
 
-func (s *swiftStorage) pathRef(b blob.Ref) string {
-	return s.container(b) + "/" + b.String()
+func (s *swiftStorage) createPathRef(b blob.Ref) blob.Ref {
+	return blob.Ref{Path: s.container(b) + "/" + b.String()}
+}
+
+func (s *swiftStorage) refContainer(b blob.Ref) (string, string) {
+	ref := b.String()
+	idx := strings.Index(ref, "/")
+
+	if idx > 0 && len(ref) > idx+1 {
+		return ref[idx+1:], ref[:idx]
+	}
+
+	return b.String(), s.container(b)
 }
 
 func newFromConfig(config *config.Config) (blobserver.Storage, error) {
