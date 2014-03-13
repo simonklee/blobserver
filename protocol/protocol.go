@@ -21,6 +21,7 @@ package protocol
 import (
 	"encoding/json"
 
+	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"
 )
 
@@ -57,4 +58,10 @@ func (p *RemoveResponse) MarshalJSON() ([]byte, error) {
 		v.Removed = []blob.Ref{}
 	}
 	return json.Marshal(v)
+}
+
+// ConfigResponse is the JSON document returned storage config handler.
+type ConfigResponse struct {
+	Data  *blobserver.Config `json:"Data"`
+	Error map[string]string  `json:"Error,omitempty"`
 }

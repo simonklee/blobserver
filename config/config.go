@@ -20,6 +20,7 @@ type S3Config struct {
 	SecretAccessKey string `toml:"secret_access_key"`
 	Bucket          string
 	DefaultACL      string `toml:"default_acl"` // optional. Default private. public-read
+	CDNUrl          string `toml:"cdn_url"`
 }
 
 type SwiftConfig struct {
@@ -31,6 +32,7 @@ type SwiftConfig struct {
 	Region           string `toml:"region"`
 	Container        string `toml:"container"`
 	ContainerReadACL string `toml:"container_read_acl"`
+	CDNUrl           string `toml:"cdn_url"`
 	Shard            bool   `toml:"shard"`
 }
 

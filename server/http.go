@@ -4,6 +4,10 @@
 
 package server
 
+import (
+	"net/http"
+)
+
 type httpError struct {
 	code    int
 	message string
@@ -19,4 +23,8 @@ func (e httpError) Error() string {
 
 func newHttpError(message string, code int) httpError {
 	return httpError{code: code, message: message}
+}
+
+func notImplementedHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "501 Not Implemented", http.StatusNotImplemented)
 }

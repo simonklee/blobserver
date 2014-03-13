@@ -1,10 +1,4 @@
-
-    - all: use http://golang.org/pkg/mime/multipart/#FileHeader to determine
-      mime type of file.
-
     - server: add stat handler
-
-    - server: add config handler
 
     - swift: connection pooling/thread-safe Connection.
 

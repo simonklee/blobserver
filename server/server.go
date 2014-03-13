@@ -26,6 +26,9 @@ func setupServer(storage blobserver.Storage) (err error) {
 	pat.Post(sub, "/remove/", createBatchRemoveHandler(storage))
 	pat.Delete(sub, `/remove/{blobRef:[[:alnum:]_\/\.-]+}/`, createRemoveHandler(storage))
 
+	sub = router.PathPrefix("/v1/api/blobserver").Subrouter()
+	pat.Get(sub, "/config/", createConfigHandler(storage))
+
 	router.StrictSlash(false)
 
 	// global middleware

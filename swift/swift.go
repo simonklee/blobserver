@@ -22,11 +22,18 @@ type swiftStorage struct {
 	containerName    string
 	shard            bool
 	containerReadACL string
-	config           *config.SwiftConfig
+	cdnUrl           string
 }
 
 func (s *swiftStorage) String() string {
 	return fmt.Sprintf("\"swift\" blob storage at host %q, container %q", s.conn.AuthUrl, s.container)
+}
+
+func (s *swiftStorage) Config() *blobserver.Config {
+	return &blobserver.Config{
+		CDNUrl: s.cdnUrl,
+		Name:   "swift",
+	}
 }
 
 func (s *swiftStorage) container(b blob.Ref) string {
@@ -69,7 +76,7 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 		shard:            swiftConf.Shard,
 		containerName:    swiftConf.Container,
 		containerReadACL: ".r:*,.rlistings",
-		config:           swiftConf,
+		cdnUrl:           swiftConf.CDNUrl,
 	}
 
 	if swiftConf.ContainerReadACL != "" {

@@ -95,23 +95,17 @@ type ShutdownStorage interface {
 //	BlobReceiver
 //	Configer
 //}
-//
-//type Config struct {
-//	Writable    bool
-//	Readable    bool
-//	Deletable   bool
-//	CanLongPoll bool
-//
-//	// the "http://host:port" and optional path (but without trailing slash) to have "/camli/*" appended
-//	URLBase       string
-//	HandlerFinder FindHandlerByTyper
-//}
-//
-//type Configer interface {
-//	Config() *Config
-//}
-//
-//type StorageConfiger interface {
-//	Storage
-//	Configer
-//}
+
+type Config struct {
+	CDNUrl string
+	Name   string
+}
+
+type Configer interface {
+	Config() *Config
+}
+
+type StorageConfiger interface {
+	Storage
+	Configer
+}

@@ -33,10 +33,18 @@ type s3Storage struct {
 	s3Client *s3.Client
 	bucket   string
 	hostname string
+	cdnUrl   string
 }
 
 func (s *s3Storage) String() string {
 	return fmt.Sprintf("\"s3\" blob storage at host %q, bucket %q", s.hostname, s.bucket)
+}
+
+func (s *s3Storage) Config() *blobserver.Config {
+	return &blobserver.Config{
+		CDNUrl: s.cdnUrl,
+		Name:   "s3",
+	}
 }
 
 func newFromConfig(config *config.Config) (blobserver.Storage, error) {
@@ -60,6 +68,7 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 		s3Client: client,
 		bucket:   s3conf.Bucket,
 		hostname: hostname,
+		cdnUrl:   s3conf.CDNUrl,
 	}
 	return sto, nil
 }
