@@ -126,5 +126,6 @@ retry:
 		}
 		return sr, err
 	}
+	b.Path = sto.pathRef(b)
 	return blob.SizedRef{Ref: b, Size: uint32(size)}, nil
 }

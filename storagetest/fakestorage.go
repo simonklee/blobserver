@@ -43,6 +43,7 @@ func (sto *fakeStorage) ReceiveBlob(b blob.Ref, source io.Reader) (sb blob.Sized
 		return sb, err
 	}
 
+	b = blob.Ref{Path: "bucket/" + b.String(), Ref: b.Ref}
 	newBlob := blob.NewBlob(b, uint32(size), func() io.ReadCloser {
 		return ioutil.NopCloser(bytes.NewReader(buf.Bytes()))
 	})

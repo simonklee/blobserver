@@ -36,6 +36,10 @@ func (s *swiftStorage) container(b blob.Ref) string {
 	return fmt.Sprintf("%s-%s", s.containerName, shards[b.Sum32()%uint32(shardCount)])
 }
 
+func (s *swiftStorage) pathRef(b blob.Ref) string {
+	return s.container(b) + "/" + b.String()
+}
+
 func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 	swiftConf := config.Swift
 

@@ -19,9 +19,9 @@ limitations under the License.
 package blob
 
 import (
-	"bytes"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/nu7hatch/gouuid"
 	"path/filepath"
@@ -29,7 +29,8 @@ import (
 
 // Ref is a reference to a blob.
 type Ref struct {
-	id string
+	Ref  string `json:"Ref"`
+	Path string `json:"Path,omitempty"`
 }
 
 func NewRef(name string) Ref {
@@ -45,16 +46,16 @@ func NewRef(name string) Ref {
 
 	buf = append(buf, id.String()...)
 	buf = append(buf, ext...)
-	return Ref{id: string(buf)}
+	return Ref{Ref: string(buf)}
 }
 
 func (r Ref) String() string {
-	return r.id
+	return r.Ref
 }
 
 func (r Ref) Sum32() uint32 {
 	var v uint32
-	for _, b := range r.id[:4] {
+	for _, b := range r.Ref[:4] {
 		v = v<<8 | uint32(b)
 	}
 	return v
@@ -62,38 +63,21 @@ func (r Ref) Sum32() uint32 {
 
 var null = []byte(`null`)
 
-// UnmarshalJSON implements Go's encoding.json.Unmarshaler interface
-func (r *Ref) UnmarshalJSON(d []byte) error {
-	if len(d) == 0 || bytes.Equal(d, null) {
-		return nil
-	}
-	if len(d) < 2 || d[0] != '"' || d[len(d)-1] != '"' {
-		return fmt.Errorf("blob: expecting a JSON string to unmarshal, got %q", d)
-	}
-	d = d[1 : len(d)-1]
-	r.id = string(d)
-	return nil
-}
-
-// MarshalJSON implements Go's encoding.json.Marshaler interface
-func (r Ref) MarshalJSON() ([]byte, error) {
-	buf := make([]byte, 0, 1+len(r.String())+1)
-	buf = append(buf, '"')
-	buf = append(buf, r.String()...)
-	buf = append(buf, '"')
-	return buf, nil
-}
-
-func Parse(id string) (r Ref, ok bool) {
-	if len(id) == 0 {
+func Parse(ref string) (r Ref, ok bool) {
+	if len(ref) == 0 {
 		return r, false
 	}
-	r.id = id
+	idx := strings.Index(ref, "/")
+	if idx > 0 && len(ref) > idx+1 {
+		r.Path = ref
+		r.Ref = ref[idx+1:]
+	} else {
+		r.Ref = ref
+	}
 	return r, true
 }
 
 // SizedRef is like a Ref but includes a size.
-// It should also be used as a value type and supports equality.
 type SizedRef struct {
 	Ref
 	Size uint32

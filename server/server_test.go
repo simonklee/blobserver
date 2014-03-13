@@ -201,5 +201,5 @@ func absURL(endpoint string, args map[string]string) string {
 		params = fmt.Sprintf("?%s", values.Encode())
 	}
 
-	return fmt.Sprintf("http://%s/v1/blobserver%s%s", serverAddr, endpoint, params)
+	return fmt.Sprintf("http://%s/v1/api/blobserver%s%s", serverAddr, endpoint, params)
 }
