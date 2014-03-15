@@ -24,7 +24,7 @@ func NewFakeStorage() blobserver.Storage {
 	}
 }
 
-func (sto *fakeStorage) FetchStreaming(b blob.Ref) (file io.ReadCloser, size uint32, err error) {
+func (sto *fakeStorage) Fetch(b blob.Ref) (file io.ReadCloser, size uint32, err error) {
 	bb, ok := sto.blobs[b.String()]
 
 	if !ok {

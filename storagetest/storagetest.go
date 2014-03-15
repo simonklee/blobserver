@@ -70,30 +70,14 @@ func Test(t *testing.T, fn func(*testing.T) (sto blobserver.Storage, cleanup fun
 	// finish here if you want to examine the test directory
 	//t.Fatalf("FINISH")
 
-	t.Logf("Testing FetchStreaming")
+	t.Logf("Testing Fetch")
 	for i, b2 := range blobs {
-		rc, size, err := sto.FetchStreaming(b2.BlobRef)
+		rc, size, err := sto.Fetch(b2.BlobRef)
 		if err != nil {
 			t.Fatalf("error fetching %d. %s: %v", i, b2, err)
 		}
 		defer rc.Close()
 		testSizedBlob(t, rc, b2.BlobRef, int64(size))
-	}
-
-	if fetcher, ok := sto.(fetcher); ok {
-		rsc, size, err := fetcher.Fetch(b1.BlobRef)
-		if err != nil {
-			t.Fatalf("error fetching %s: %v", b1, err)
-		}
-		defer rsc.Close()
-		n, err := rsc.Seek(0, 0)
-		if err != nil {
-			t.Fatalf("error seeking in %s: %v", rsc, err)
-		}
-		if n != 0 {
-			t.Fatalf("after seeking to 0, we are at %d!", n)
-		}
-		testSizedBlob(t, rsc, b1.BlobRef, size)
 	}
 
 	t.Logf("Testing Stat")
@@ -113,10 +97,6 @@ func Test(t *testing.T, fn func(*testing.T) (sto blobserver.Storage, cleanup fun
 			t.Fatalf("RemoveBlob %s: %v", b1, err)
 		}
 	}
-}
-
-type fetcher interface {
-	Fetch(blob blob.Ref) (blobserver.ReadSeekCloser, int64, error)
 }
 
 func sha1FromBinary(b []byte) []byte {
