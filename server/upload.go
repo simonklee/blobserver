@@ -18,11 +18,11 @@ limitations under the License.
 package server
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"mime"
 	"net/http"
-	"encoding/hex"
 
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"

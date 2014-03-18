@@ -20,12 +20,12 @@ package storagetest
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 	"testing"
-	"encoding/hex"
 
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"

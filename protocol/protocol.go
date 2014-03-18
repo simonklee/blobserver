@@ -26,15 +26,15 @@ import (
 )
 
 type RefInfo struct {
-	Ref  blob.Ref `json:"Path"`
+	blob.Ref
 	Size uint32
-	MD5 string `json:"MD5,omitempty"`
+	MD5  string `json:"MD5,omitempty"`
 }
 
 // UploadResponse is the JSON document returned from the blob batch
 // upload handler.
 type UploadResponse struct {
-	Received []RefInfo   `json:"Data"`
+	Received []RefInfo         `json:"Data"`
 	Error    map[string]string `json:"Error,omitempty"`
 }
 
