@@ -22,6 +22,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"encoding/hex"
 
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"
@@ -84,7 +85,16 @@ func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiv
 		receivedBlobs = append(receivedBlobs, blobGot)
 	}
 
-	res.Received = receivedBlobs
+	for _, got := range receivedBlobs {
+		rv := protocol.RefInfo{
+			Ref:  got.Ref,
+			Size: uint32(got.Size),
+		}
+		if h := got.Hash(); h != nil {
+			rv.MD5 = hex.EncodeToString(h.Sum(nil))
+		}
+		res.Received = append(res.Received, rv)
+	}
 	httputil.ReturnJSONCode(rw, 201, res)
 	return nil
 }

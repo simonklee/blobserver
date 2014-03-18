@@ -25,22 +25,23 @@ import (
 	"github.com/simonz05/blobserver/blob"
 )
 
-type RefAndSize struct {
-	Ref  blob.Ref `json:"path"`
-	Size uint32   `json:"size"`
+type RefInfo struct {
+	Ref  blob.Ref `json:"Path"`
+	Size uint32
+	MD5 string `json:"MD5,omitempty"`
 }
 
 // UploadResponse is the JSON document returned from the blob batch
 // upload handler.
 type UploadResponse struct {
-	Received []blob.SizedRef   `json:"Data"`
+	Received []RefInfo   `json:"Data"`
 	Error    map[string]string `json:"Error,omitempty"`
 }
 
 func (p *UploadResponse) MarshalJSON() ([]byte, error) {
 	v := *p
 	if v.Received == nil {
-		v.Received = []blob.SizedRef{}
+		v.Received = []RefInfo{}
 	}
 	return json.Marshal(v)
 }

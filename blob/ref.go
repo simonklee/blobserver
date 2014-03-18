@@ -18,6 +18,7 @@ package blob
 
 import (
 	"fmt"
+	"hash"
 	"path/filepath"
 
 	"github.com/nu7hatch/gouuid"
@@ -26,6 +27,7 @@ import (
 // Ref is a reference to a blob.
 type Ref struct {
 	Path string `json:"Path"`
+	h    hash.Hash
 }
 
 func NewRef(name string) Ref {
@@ -56,6 +58,14 @@ func (r Ref) Sum32() uint32 {
 	return v
 }
 
+func (r *Ref) SetHash(h hash.Hash) {
+	r.h = h
+}
+
+func (r Ref) Hash() hash.Hash {
+	return r.h
+}
+
 var null = []byte(`null`)
 
 func Parse(ref string) (r Ref, ok bool) {
@@ -78,6 +88,12 @@ func (sr SizedRef) String() string {
 
 func NewSizedRef(name string) SizedRef {
 	return SizedRef{Ref: NewRef(name)}
+}
+
+// SizedRef is like a Ref but includes a size.
+type SizedInfoRef struct {
+	Ref
+	Size uint32
 }
 
 var bufPool = make(chan []byte, 20)

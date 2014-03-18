@@ -5,8 +5,6 @@
 package swift
 
 import (
-	"fmt"
-
 	"github.com/simonz05/blobserver/blob"
 	"github.com/simonz05/util/log"
 	"github.com/simonz05/util/syncutil"
@@ -16,7 +14,6 @@ var removeGate = syncutil.NewGate(20) // arbitrary
 
 func (sto *swiftStorage) RemoveBlobs(blobs []blob.Ref) error {
 	var wg syncutil.Group
-	fmt.Println("START REMOVE")
 
 	for _, br := range blobs {
 		br := br

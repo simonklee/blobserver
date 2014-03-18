@@ -19,12 +19,13 @@ limitations under the License.
 package storagetest
 
 import (
-	"crypto/sha1"
+	"crypto/md5"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 	"testing"
+	"encoding/hex"
 
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"
@@ -44,6 +45,7 @@ func Test(t *testing.T, fn func(*testing.T) (sto blobserver.Storage, cleanup fun
 	var blobs []*Blob
 	var blobRefs []blob.Ref
 	var blobSizedRefs []blob.SizedRef
+	var md5s []string
 
 	contents := []string{"foo", "quux", "asdf", "qwerty", "0123456789"}
 	if !testing.Short() {
@@ -64,6 +66,7 @@ func Test(t *testing.T, fn func(*testing.T) (sto blobserver.Storage, cleanup fun
 		blobs = append(blobs, b1)
 		blobRefs = append(blobRefs, b1.BlobRef)
 		blobSizedRefs = append(blobSizedRefs, b1.SizedRef())
+		md5s = append(md5s, hex.EncodeToString(b1s.Hash().Sum(nil)))
 	}
 	b1 := blobs[0]
 
@@ -77,7 +80,7 @@ func Test(t *testing.T, fn func(*testing.T) (sto blobserver.Storage, cleanup fun
 			t.Fatalf("error fetching %d. %s: %v", i, b2, err)
 		}
 		defer rc.Close()
-		testSizedBlob(t, rc, b2.BlobRef, int64(size))
+		testSizedBlob(t, rc, b2.BlobRef, int64(size), md5s[i])
 	}
 
 	t.Logf("Testing Stat")
@@ -108,8 +111,8 @@ func sha1FromBinary(b []byte) []byte {
 	return d[:]
 }
 
-func testSizedBlob(t *testing.T, r io.Reader, b1 blob.Ref, size int64) {
-	h1 := sha1.New()
+func testSizedBlob(t *testing.T, r io.Reader, b1 blob.Ref, size int64, hash string) {
+	h1 := md5.New()
 	n, err := io.Copy(h1, r)
 	if err != nil {
 		t.Fatalf("error reading from %s: %v", r, err)
@@ -117,10 +120,9 @@ func testSizedBlob(t *testing.T, r io.Reader, b1 blob.Ref, size int64) {
 	if n != size {
 		t.Fatalf("read %d bytes from %s, metadata said %d!", n, size)
 	}
-	//h2 := sha1FromBinary(h1.Sum(nil))
-	//if h2 != h1.Sum(nil) {
-	//	t.Fatalf("content mismatch (awaited %s, got %s)", h1, h2)
-	//}
+	if hash != hex.EncodeToString(h1.Sum(nil)) {
+		t.Fatalf("content mismatch (awaited %s, got %s)", h1, hash)
+	}
 }
 
 func testStat(t *testing.T, enum <-chan blob.SizedRef, want []blob.SizedRef) {
@@ -156,7 +158,7 @@ type Blob struct {
 }
 
 func NewBlob(contents string) *Blob {
-	h := sha1.New()
+	h := md5.New()
 	h.Write([]byte(contents))
 	v := fmt.Sprintf("%x", h.Sum(nil))
 	return &Blob{

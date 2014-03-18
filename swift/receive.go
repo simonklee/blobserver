@@ -7,12 +7,11 @@ package swift
 import (
 	"bytes"
 	"crypto/md5"
-	"fmt"
+	"encoding/hex"
 	"hash"
 	"io"
 	"io/ioutil"
 	"os"
-	//"time"
 
 	"github.com/ncw/swift"
 	"github.com/simonz05/blobserver"
@@ -108,7 +107,7 @@ func (sto *swiftStorage) ReceiveBlob(b blob.Ref, source io.Reader) (sr blob.Size
 		return sr, err
 	}
 
-	hash := fmt.Sprintf("%x", slurper.md5.Sum(nil))
+	hash := hex.EncodeToString(slurper.md5.Sum(nil))
 	retries := 1
 retry:
 	_, err = sto.conn.ObjectPut(sto.container(b), b.String(), slurper, false, hash, "", nil)
@@ -128,6 +127,7 @@ retry:
 		return sr, err
 	}
 	ref := sto.createPathRef(b)
+	ref.SetHash(slurper.md5)
 	log.Println("Create: ", ref)
 	return blob.SizedRef{Ref: ref, Size: uint32(size)}, nil
 }
