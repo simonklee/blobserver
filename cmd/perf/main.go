@@ -6,7 +6,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"time"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,18 +14,17 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"flag"
+	"time"
 
 	"github.com/simonz05/blobserver/protocol"
 	"github.com/simonz05/util/log"
 )
 
-
 var (
 	serverAddr = flag.String("addr", "http://localhost:6064/v1/api/blobserver", "server addr")
-	workers = flag.Int("workers", 10, "worker count")
-	counter int 
-	lastPrint time.Time 
+	workers    = flag.Int("workers", 10, "worker count")
+	counter    int
+	lastPrint  time.Time
 )
 
 func main() {
@@ -39,8 +38,8 @@ func main() {
 	}
 
 	lastPrint = time.Now()
-	for { 
-		queue<-1
+	for {
+		queue <- 1
 	}
 }
 
