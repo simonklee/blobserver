@@ -13,10 +13,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/ncw/swift"
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"
-	"github.com/simonz05/util/log"
+	"github.com/simonz05/blobserver/third_party/github.com/ncw/swift"
+	"github.com/simonz05/blobserver/third_party/github.com/simonz05/util/log"
 )
 
 // swiftSlurper slurps up a blob to memory (or spilling to disk if

@@ -21,7 +21,7 @@ import (
 	"hash"
 	"path/filepath"
 
-	"github.com/nu7hatch/gouuid"
+	"github.com/simonz05/blobserver/third_party/github.com/nu7hatch/gouuid"
 )
 
 // Ref is a reference to a blob.

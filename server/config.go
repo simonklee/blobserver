@@ -9,8 +9,8 @@ import (
 
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/protocol"
-	"github.com/simonz05/util/httputil"
-	"github.com/simonz05/util/log"
+	"github.com/simonz05/blobserver/third_party/github.com/simonz05/util/httputil"
+	"github.com/simonz05/blobserver/third_party/github.com/simonz05/util/log"
 )
 
 // createBatchRemoveHandler returns the handler that removes blobs

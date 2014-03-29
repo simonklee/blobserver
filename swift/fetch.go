@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/simonz05/blobserver/blob"
-	"github.com/simonz05/util/log"
+	"github.com/simonz05/blobserver/third_party/github.com/simonz05/util/log"
 )
 
 // getInt64FromHeader is a helper function to decode int64 from header.

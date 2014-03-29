@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ncw/swift"
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"
 	"github.com/simonz05/blobserver/config"
+	"github.com/simonz05/blobserver/third_party/github.com/ncw/swift"
 )
 
 type swiftStorage struct {

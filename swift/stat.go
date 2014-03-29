@@ -9,8 +9,8 @@ import (
 	"os"
 
 	"github.com/simonz05/blobserver/blob"
-	"github.com/simonz05/util/log"
-	"github.com/simonz05/util/syncutil"
+	"github.com/simonz05/blobserver/third_party/github.com/simonz05/util/log"
+	"github.com/simonz05/blobserver/third_party/github.com/simonz05/util/syncutil"
 )
 
 var statGate = syncutil.NewGate(20) // arbitrary

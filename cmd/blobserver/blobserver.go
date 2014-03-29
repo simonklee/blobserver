@@ -11,13 +11,13 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"git.tideland.biz/goas/monitoring"
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/config"
 	_ "github.com/simonz05/blobserver/s3"
 	"github.com/simonz05/blobserver/server"
 	_ "github.com/simonz05/blobserver/swift"
-	"github.com/simonz05/util/log"
+	"github.com/simonz05/blobserver/third_party/git.tideland.biz/goas/monitoring"
+	"github.com/simonz05/blobserver/third_party/github.com/simonz05/util/log"
 )
 
 var (

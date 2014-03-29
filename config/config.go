@@ -5,7 +5,7 @@
 package config
 
 import (
-	"github.com/BurntSushi/toml"
+	"github.com/simonz05/blobserver/third_party/github.com/BurntSushi/toml"
 )
 
 type Config struct {

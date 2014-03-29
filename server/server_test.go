@@ -20,8 +20,8 @@ import (
 	"github.com/simonz05/blobserver/blob"
 	"github.com/simonz05/blobserver/protocol"
 	"github.com/simonz05/blobserver/storagetest"
+	"github.com/simonz05/blobserver/third_party/github.com/simonz05/util/log"
 	"github.com/simonz05/util/assert"
-	"github.com/simonz05/util/log"
 )
 
 var (

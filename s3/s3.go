@@ -26,7 +26,7 @@ import (
 
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/config"
-	"github.com/simonz05/util/amazon/s3"
+	"github.com/simonz05/blobserver/third_party/github.com/simonz05/util/amazon/s3"
 )
 
 type s3Storage struct {
