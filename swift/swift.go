@@ -90,7 +90,7 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 	return sto, nil
 }
 
-const shardCount = 2 // 8<<5
+const shardCount = 8<<7
 
 var shards [shardCount]string
 
