@@ -108,21 +108,24 @@ func (sto *swiftStorage) ReceiveBlob(b blob.Ref, source io.Reader) (sr blob.Size
 	}
 
 	hash := hex.EncodeToString(slurper.md5.Sum(nil))
+	name, cont := sto.refContainer(b)
 	retries := 1
 retry:
-	_, err = sto.conn.ObjectPut(sto.container(b), b.String(), slurper, false, hash, "", nil)
+	_, err = sto.conn.ObjectPut(cont, name, slurper, false, hash, "", nil)
 
 	if err != nil {
-		// assume both of these mean container not found in this context
-		if (err == swift.ObjectNotFound || err == swift.ContainerNotFound) && retries > 0 {
+		if retries > 0 {
 			retries--
 			slurper.Seek(0, 0)
-			h := make(swift.Headers)
-			h["X-Container-Read"] = sto.containerReadACL
-			err = sto.conn.ContainerCreate(sto.container(b), h)
-			if err == nil {
-				goto retry
+
+			// assume both of these mean container not found in this context. Create the container first
+			if err == swift.ObjectNotFound || err == swift.ContainerNotFound {
+				if err = sto.createContainer(cont); err != nil {
+					return sr, err
+				}
 			}
+
+			goto retry
 		}
 		return sr, err
 	}

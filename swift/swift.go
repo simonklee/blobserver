@@ -17,6 +17,8 @@ import (
 	"github.com/simonz05/blobserver/config"
 )
 
+var shards sharder
+
 type swiftStorage struct {
 	conn             *swift.Connection
 	containerName    string
@@ -41,14 +43,17 @@ func (s *swiftStorage) container(b blob.Ref) string {
 		return s.containerName
 	}
 
-	return fmt.Sprintf("%s-%s", s.containerName, shards[b.Sum32()%uint32(shardCount)])
+	ref := b.String()
+	idx := strings.Index(ref, "/")
+
+	if idx > 0 {
+		return ref[:idx]
+	}
+
+	return fmt.Sprintf("%s-%s", s.containerName, shards.shard(ref[:]))
 }
 
-func (s *swiftStorage) createPathRef(b blob.Ref) blob.Ref {
-	return blob.Ref{Path: s.container(b) + "/" + b.String()}
-}
-
-func (s *swiftStorage) refContainer(b blob.Ref) (string, string) {
+func (s *swiftStorage) refContainer(b blob.Ref) (name string, container string) {
 	ref := b.String()
 	idx := strings.Index(ref, "/")
 
@@ -57,6 +62,17 @@ func (s *swiftStorage) refContainer(b blob.Ref) (string, string) {
 	}
 
 	return b.String(), s.container(b)
+}
+
+func (sto *swiftStorage) createContainer(name string) error {
+	header := make(swift.Headers)
+	header["X-Container-Read"] = sto.containerReadACL
+	return sto.conn.ContainerCreate(name, header)
+}
+
+func (s *swiftStorage) createPathRef(b blob.Ref) blob.Ref {
+	name, cont := s.refContainer(b)
+	return blob.Ref{Path: cont + "/" + name}
 }
 
 func newFromConfig(config *config.Config) (blobserver.Storage, error) {
@@ -89,14 +105,7 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 	}
 	return sto, nil
 }
-
-const shardCount = 8<<7
-
-var shards [shardCount]string
-
 func init() {
-	for i := range shards {
-		shards[i] = fmt.Sprintf("%0.2X", i)
-	}
+	shards = newSharder()
 	blobserver.RegisterStorageConstructor("swift", blobserver.StorageConstructor(newFromConfig))
 }
