@@ -17,17 +17,16 @@ type sharder [shardCount]string
 
 func (s sharder) shard(v string) string {
 	src := md5.Sum([]byte(v))
-	dst := make([]byte, hex.EncodedLen(len(src)))
-	hex.Encode(dst, src[:])
-	return s[int(s.num(dst))]
+	str := hex.EncodeToString(src[:])
+	return s[int(s.num(str))]
 }
 
-func (s sharder) num(digest []byte) uint32 {
+func (s sharder) num(digest string) uint32 {
 	return s.sum32(digest) % uint32(shardCount)
 }
 
-func (s sharder) sum32(digest []byte) uint32 {
-	vv, _ := strconv.ParseUint(string(digest[:4]), 16, 32)
+func (s sharder) sum32(digest string) uint32 {
+	vv, _ := strconv.ParseUint(digest[:4], 16, 32)
 	return uint32(vv)
 }
 
