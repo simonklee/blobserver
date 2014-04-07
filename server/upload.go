@@ -37,6 +37,7 @@ func createUploadHandler(storage blobserver.Storage) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := handleMultiPartUpload(w, r, storage)
 		if err != nil {
+			log.Errorf("upload: %v", err)
 			httputil.ServeJSONError(w, err)
 		}
 	})

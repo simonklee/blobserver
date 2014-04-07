@@ -124,7 +124,7 @@ retry:
 					return sr, err
 				}
 			}
-
+			err = nil
 			goto retry
 		}
 		return sr, err
