@@ -105,6 +105,7 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 	}
 	return sto, nil
 }
+
 func init() {
 	shards = newSharder()
 	blobserver.RegisterStorageConstructor("swift", blobserver.StorageConstructor(newFromConfig))
