@@ -62,7 +62,7 @@ func uploader(ch chan int) {
 		req, err := multipartRequest("/blob/upload/", filename, v)
 
 		if err != nil {
-			log.Error("err creating request %v", err)
+			log.Errorf("err creating request %v", err)
 			return
 		}
 

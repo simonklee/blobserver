@@ -61,7 +61,7 @@ func Test(t *testing.T, fn func(*testing.T) (sto blobserver.Storage, cleanup fun
 			t.Fatalf("ReceiveBlob of %s: %v", b1, err)
 		}
 		if b1s.Size != b1.SizedRef().Size {
-			t.Fatal("Received %v; want %v", b1s, b1.SizedRef())
+			t.Fatalf("Received %v; want %v", b1s, b1.SizedRef())
 		}
 		blobs = append(blobs, b1)
 		blobRefs = append(blobRefs, b1.BlobRef)
@@ -118,7 +118,7 @@ func testSizedBlob(t *testing.T, r io.Reader, b1 blob.Ref, size int64, hash stri
 		t.Fatalf("error reading from %s: %v", r, err)
 	}
 	if n != size {
-		t.Fatalf("read %d bytes from %s, metadata said %d!", n, size)
+		t.Fatalf("read %d bytes exp %d", n, size)
 	}
 	if hash != hex.EncodeToString(h1.Sum(nil)) {
 		t.Fatalf("content mismatch (awaited %s, got %s)", h1, hash)
@@ -168,7 +168,7 @@ func NewBlob(contents string) *Blob {
 }
 
 func (tb *Blob) SizedRef() blob.SizedRef {
-	return blob.SizedRef{tb.BlobRef, uint32(len(tb.Contents))}
+	return blob.SizedRef{Ref: tb.BlobRef, Size: uint32(len(tb.Contents))}
 }
 
 func (tb *Blob) Size() int64 {

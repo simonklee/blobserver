@@ -29,7 +29,7 @@ type swiftStorage struct {
 }
 
 func (s *swiftStorage) String() string {
-	return fmt.Sprintf("\"swift\" blob storage at host %q, container %q", s.conn.AuthUrl, s.container)
+	return fmt.Sprintf("\"swift\" blob storage at host %v, container %v", s.conn.AuthUrl, s.container)
 }
 
 func (s *swiftStorage) Config() *blobserver.Config {

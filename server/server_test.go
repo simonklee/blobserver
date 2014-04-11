@@ -83,7 +83,7 @@ func TestServer(t *testing.T) {
 		ast.True(len(br1.Ref.String()) > 0)
 
 		blobRefs = append(blobRefs, br1.Ref)
-		blobSizedRefs = append(blobSizedRefs, blob.SizedRef{br1.Ref, br1.Size})
+		blobSizedRefs = append(blobSizedRefs, blob.SizedRef{Ref: br1.Ref, Size: br1.Size})
 	}
 
 	t.Logf("test remove")
