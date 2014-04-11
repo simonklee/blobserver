@@ -114,17 +114,15 @@ retry:
 	_, err = sto.conn.ObjectPut(cont, name, slurper, false, hash, "", nil)
 
 	if err != nil {
-		if retries > 0 {
+		// assume both of these mean container not found in this context. Create the container first
+		if retries > 0 && (err == swift.ObjectNotFound || err == swift.ContainerNotFound) {
 			retries--
-			slurper.Seek(0, 0)
 
-			// assume both of these mean container not found in this context. Create the container first
-			if err == swift.ObjectNotFound || err == swift.ContainerNotFound {
-				if err = sto.createContainer(cont); err != nil {
-					return sr, err
-				}
+			if err = sto.createContainer(cont); err != nil {
+				return sr, err
 			}
-			err = nil
+
+			slurper.Seek(0, 0)
 			goto retry
 		}
 		return sr, err

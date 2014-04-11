@@ -15,6 +15,7 @@ import (
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/blob"
 	"github.com/simonz05/blobserver/config"
+	"github.com/simonz05/util/log"
 )
 
 var shards sharder
@@ -64,10 +65,40 @@ func (s *swiftStorage) refContainer(b blob.Ref) (name string, container string) 
 	return b.String(), s.container(b)
 }
 
-func (sto *swiftStorage) createContainer(name string) error {
-	header := make(swift.Headers)
-	header["X-Container-Read"] = sto.containerReadACL
-	return sto.conn.ContainerCreate(name, header)
+func (sto *swiftStorage) createContainer(name string) (err error) {
+	for i := 0; i < 3; i++ {
+		if err = sto.createCheckContainer(name); err != nil {
+			log.Errorf("create container failed %d, %v", i, err)
+		}
+	}
+	return
+}
+
+func (sto *swiftStorage) createCheckContainer(name string) (err error) {
+	h := swift.Headers{"X-Container-Read": sto.containerReadACL}
+	err = sto.conn.ContainerCreate(name, h)
+
+	if err != nil {
+		return err
+	}
+
+	_, headers, err := sto.conn.Container(name)
+
+	if err != nil {
+		return err
+	}
+
+	r, ok := headers["X-Container-Read"]
+
+	if !ok {
+		return fmt.Errorf("create container exp X-Container-Read key missing")
+	}
+
+	if r != sto.containerReadACL {
+		return fmt.Errorf("create container exp X-Container-Read: %s", sto.containerReadACL)
+	}
+
+	return nil
 }
 
 func (s *swiftStorage) createPathRef(b blob.Ref) blob.Ref {
@@ -105,6 +136,7 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 	}
 	return sto, nil
 }
+
 func init() {
 	shards = newSharder()
 	blobserver.RegisterStorageConstructor("swift", blobserver.StorageConstructor(newFromConfig))

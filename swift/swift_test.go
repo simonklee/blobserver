@@ -5,6 +5,7 @@
 package swift
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -37,38 +38,42 @@ func TestSwift(t *testing.T) {
 	})
 }
 
-func creator(t *testing.T, in, out chan string, sto *swiftStorage) {
+func creator(ech chan error, in, out chan string, sto *swiftStorage) {
 	for cont := range in {
 		err := sto.createContainer(cont)
 		if err != nil {
-			t.Fatal(err)
+			ech <- err
+			return
 		}
 
 		out <- cont
 	}
 }
 
-func statter(t *testing.T, in, out chan string, sto *swiftStorage) {
+func statter(ech chan error, in, out chan string, sto *swiftStorage) {
 	for cont := range in {
 		_, headers, err := sto.conn.Container(cont)
 		if err != nil {
-			t.Fatal(err)
+			ech <- err
+			return
 		}
 		r := headers["X-Container-Read"]
 		exp := ".r:*,.rlistings"
 
 		if r != exp {
-			t.Fatalf("exp %s, got %s", exp, r)
+			ech <- fmt.Errorf("exp %s, got %s", exp, r)
+			return
 		}
 		out <- cont
 	}
 }
 
-func deleter(t *testing.T, in, out chan string, sto *swiftStorage) {
+func deleter(ech chan error, in, out chan string, sto *swiftStorage) {
 	for cont := range in {
 		err := sto.conn.ContainerDelete(cont)
 		if err != nil {
-			t.Fatal(err)
+			ech <- err
+			return
 		}
 		out <- cont
 	}
@@ -77,19 +82,20 @@ func deleter(t *testing.T, in, out chan string, sto *swiftStorage) {
 func TestSwiftContainerACL(t *testing.T) {
 	sto := storageFromConf(t)
 	sw := sto.(*swiftStorage)
-	w := 32
+	w := 64
 	if testing.Short() {
 		w = 4
 	}
 	cch := make(chan string)
 	sch := make(chan string)
 	dch := make(chan string)
+	ech := make(chan error)
 	qch := make(chan string, 32)
 
 	for i := 0; i < w; i++ {
-		go creator(t, cch, sch, sw)
-		go statter(t, sch, dch, sw)
-		go deleter(t, dch, qch, sw)
+		go creator(ech, cch, sch, sw)
+		go statter(ech, sch, dch, sw)
+		go deleter(ech, dch, qch, sw)
 	}
 
 	var shards []string
@@ -103,12 +109,16 @@ func TestSwiftContainerACL(t *testing.T) {
 
 	for _, shard := range shards {
 		go func(ch chan string, shard string) {
-			ch <- "cc-" + shard
+			ch <- "ctest-" + shard
 		}(cch, shard)
 	}
 
 	for i := len(shards); i > 0; i-- {
-		<-qch
+		select {
+		case <-qch:
+		case err := <-ech:
+			t.Fatal(err)
+		}
 	}
 
 	close(cch)
