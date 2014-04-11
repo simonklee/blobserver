@@ -6,12 +6,11 @@ package swift
 
 import (
 	"os"
-	"fmt"
 	"testing"
 
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/config"
-	//"github.com/simonz05/blobserver/storagetest"
+	"github.com/simonz05/blobserver/storagetest"
 )
 
 func storageFromConf(t *testing.T) blobserver.Storage {
@@ -32,78 +31,78 @@ func storageFromConf(t *testing.T) blobserver.Storage {
 	return sto
 }
 
-// func TestSwift(t *testing.T) {
-// 	storagetest.Test(t, func(t *testing.T) (sto blobserver.Storage, cleanup func()) {
-// 		return storageFromConf(t), func() {}
-// 	})
-// }
+func TestSwift(t *testing.T) {
+	storagetest.Test(t, func(t *testing.T) (sto blobserver.Storage, cleanup func()) {
+		return storageFromConf(t), func() {}
+	})
+}
 
-func creator(in, out chan string, sto *swiftStorage) {
+func creator(t *testing.T, in, out chan string, sto *swiftStorage) {
 	for cont := range in {
 		err := sto.createContainer(cont)
 		if err != nil {
-			fmt.Println(err)
+			t.Fatal(err)
 		}
 
-		//fmt.Printf("c: %s -> stat\n", cont)
-		out<-cont
+		out <- cont
 	}
 }
 
-func stater(in, out chan string, sto *swiftStorage) {
+func statter(t *testing.T, in, out chan string, sto *swiftStorage) {
 	for cont := range in {
 		_, headers, err := sto.conn.Container(cont)
 		if err != nil {
-			//fmt.Println(err)
-			out<-cont
-			continue
+			t.Fatal(err)
 		}
 		r := headers["X-Container-Read"]
-		if r != ".r:*,.rlistings" {
-			fmt.Println("cont", cont, r)
+		exp := ".r:*,.rlistings"
+
+		if r != exp {
+			t.Fatalf("exp %s, got %s", exp, r)
 		}
-		//fmt.Printf("s: %s -> delete\n", cont)
-		out<-cont
+		out <- cont
 	}
 }
 
-func deleter(in, out chan string, sto *swiftStorage) {
+func deleter(t *testing.T, in, out chan string, sto *swiftStorage) {
 	for cont := range in {
 		err := sto.conn.ContainerDelete(cont)
 		if err != nil {
-			//fmt.Println(err)
+			t.Fatal(err)
 		}
-		//fmt.Printf("d: %s -> quit\n", cont)
-		out<-cont
+		out <- cont
 	}
 }
 
-func TestSwiftContainer(t *testing.T) {
+func TestSwiftContainerACL(t *testing.T) {
 	sto := storageFromConf(t)
 	sw := sto.(*swiftStorage)
-	w := 256
+	w := 32
+	if testing.Short() {
+		w = 4
+	}
 	cch := make(chan string)
 	sch := make(chan string)
 	dch := make(chan string)
 	qch := make(chan string, 32)
 
 	for i := 0; i < w; i++ {
-		go creator(cch, sch, sw)
-		go stater(sch, dch, sw)
-		go deleter(dch, qch, sw)
+		go creator(t, cch, sch, sw)
+		go statter(t, sch, dch, sw)
+		go deleter(t, dch, qch, sw)
 	}
 
-	var shards []string 
+	var shards []string
 	ss := newSharder()
 
 	if testing.Short() {
 		shards = ss[:5]
 	} else {
-		shards = ss[:]
+		shards = ss[:100]
 	}
 
 	for _, shard := range shards {
-		go func(ch chan string, shard string) { 
+		go func(ch chan string, shard string) {
 			ch <- "cc-" + shard
 		}(cch, shard)
 	}
