@@ -40,7 +40,7 @@ func statCont(ech chan error, in, out chan string, sto *swiftStorage) {
 // checkInit will create all containers for shards
 func (s *swiftStorage) checkInit() error {
 	if !s.shard {
-		return false
+		return nil
 	}
 
 	w := runtime.NumCPU() << 3
