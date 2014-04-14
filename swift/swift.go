@@ -106,8 +106,8 @@ func (s *swiftStorage) createPathRef(b blob.Ref) blob.Ref {
 	return blob.Ref{Path: cont + "/" + name}
 }
 
-func newFromConfig(config *config.Config) (blobserver.Storage, error) {
-	swiftConf := config.Swift
+func newFromConfig(conf *config.Config) (blobserver.Storage, error) {
+	swiftConf := conf.Swift
 
 	conn := &swift.Connection{
 		UserName: swiftConf.APIUser,
@@ -134,6 +134,13 @@ func newFromConfig(config *config.Config) (blobserver.Storage, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if swiftConf.CheckInit {
+		if err = sto.checkInit(); err != nil {
+			return nil, err
+		}
+	}
+
 	return sto, nil
 }
 

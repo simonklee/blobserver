@@ -34,6 +34,7 @@ type SwiftConfig struct {
 	ContainerReadACL string `toml:"container_read_acl"`
 	CDNUrl           string `toml:"cdn_url"`
 	Shard            bool   `toml:"shard"`
+	CheckInit        bool   `toml:"check_init"`
 }
 
 func (c *Config) StorageType() string {
