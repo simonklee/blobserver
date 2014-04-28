@@ -80,7 +80,13 @@ func handleMultiPartUpload(rw http.ResponseWriter, req *http.Request, blobReceiv
 			err = fmt.Errorf("blob over the limit of %d bytes", blobserver.MaxBlobSize)
 		}
 		if err != nil {
-			return newHttpError(fmt.Sprintf("Error receiving blob (read bytes: %d) %v: %v\n", readBytes, ref, err), 500)
+			var errmsg string
+			if log.Severity >= log.LevelInfo {
+				errmsg = fmt.Sprintf("Error receiving blob (read bytes: %d) %v: %v\n", readBytes, ref, err)
+			} else {
+				errmsg = fmt.Sprintf("Error receiving blob: %v\n", err)
+			}
+			return newHttpError(errmsg, 500)
 		}
 		log.Printf("Received blob %v\n", blobGot)
 		receivedBlobs = append(receivedBlobs, blobGot)
