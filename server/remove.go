@@ -33,25 +33,29 @@ const maxRemovesPerRequest = 1000
 
 // createBatchRemoveHandler returns the handler that removes blobs
 func createBatchRemoveHandler(storage blobserver.Storage) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := handleBatchRemove(w, r, storage)
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		res, err := handleBatchRemove(r, storage)
 		if err != nil {
-			httputil.ServeJSONError(w, err)
+			httputil.ServeJSONError(rw, err)
+		} else {
+			httputil.ReturnJSON(rw, res)
 		}
 	})
 }
 
 // createRemoveHandler returns the handler that removes blob a single blob at path
 func createRemoveHandler(storage blobserver.Storage) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		err := handleRemove(w, r, storage)
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		res, err := handleRemove(r, storage)
 		if err != nil {
-			httputil.ServeJSONError(w, err)
+			httputil.ServeJSONError(rw, err)
+		} else {
+			httputil.ReturnJSON(rw, res)
 		}
 	})
 }
 
-func handleBatchRemove(w http.ResponseWriter, req *http.Request, storage blobserver.Storage) error {
+func handleBatchRemove(req *http.Request, storage blobserver.Storage) (interface{}, error) {
 	res := new(protocol.RemoveResponse)
 	n := 0
 	toRemove := make([]blob.Ref, 0)
@@ -59,8 +63,7 @@ func handleBatchRemove(w http.ResponseWriter, req *http.Request, storage blobser
 	for {
 		n++
 		if n > maxRemovesPerRequest {
-			return newHttpError(fmt.Sprintf(
-				"Too many removes in this request; max is %d", maxRemovesPerRequest), 400)
+			return nil, newRateLimitError(maxRemovesPerRequest)
 		}
 
 		key := fmt.Sprintf("blob%v", n)
@@ -78,30 +81,28 @@ func handleBatchRemove(w http.ResponseWriter, req *http.Request, storage blobser
 
 	if err != nil {
 		log.Errorf("Server error during remove: %v", err)
-		return newHttpError("Server error", http.StatusInternalServerError)
+		return nil, newHTTPError("Server error", http.StatusInternalServerError)
 	}
 
 	res.Removed = toRemove
-	httputil.ReturnJSON(w, res)
-	return nil
+	return res, nil
 }
 
-func handleRemove(w http.ResponseWriter, req *http.Request, storage blobserver.Storage) error {
+func handleRemove(req *http.Request, storage blobserver.Storage) (interface{}, error) {
 	res := new(protocol.RemoveResponse)
 	vars := mux.Vars(req)
 	ref, ok := blob.Parse(vars["blobRef"])
 	if !ok {
-		return newHttpError("Invalid blob ref", 400)
+		return nil, newHTTPError("Invalid blob ref", http.StatusBadRequest)
 	}
 	toRemove := []blob.Ref{ref}
 	err := storage.RemoveBlobs(toRemove)
 
 	if err != nil {
 		log.Errorf("Server error during remove: %v", err)
-		return newHttpError("Server error", 500)
+		return nil, newHTTPError("Server error", http.StatusInternalServerError)
 	}
 
 	res.Removed = toRemove
-	httputil.ReturnJSON(w, res)
-	return nil
+	return res, nil
 }

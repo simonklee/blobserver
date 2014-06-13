@@ -23,8 +23,11 @@ func setupServer(storage blobserver.Storage) (err error) {
 
 	sub := router.PathPrefix("/v1/api/blobserver/blob").Subrouter()
 	pat.Post(sub, "/upload/", createUploadHandler(storage))
-	pat.Post(sub, "/remove/", createBatchRemoveHandler(storage))
 	pat.Delete(sub, `/remove/{blobRef:[[:alnum:]_\/\.-]+}/`, createRemoveHandler(storage))
+	pat.Post(sub, "/remove/", createBatchRemoveHandler(storage))
+	pat.Get(sub, `/stat/{blobRef:[[:alnum:]_\/\.-]+}/`, createStatHandler(storage))
+	pat.Head(sub, `/stat/{blobRef:[[:alnum:]_\/\.-]+}/`, createStatHandler(storage))
+	pat.Get(sub, "/stat/", createBatchStatHandler(storage))
 
 	sub = router.PathPrefix("/v1/api/blobserver").Subrouter()
 	pat.Get(sub, "/config/", createConfigHandler(storage))

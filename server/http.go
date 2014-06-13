@@ -5,8 +5,14 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 )
+
+func newRateLimitError(max int) error {
+	msg := fmt.Sprintf("Max per request is %d", max)
+	return newHTTPError(msg, http.StatusBadRequest)
+}
 
 type httpError struct {
 	code    int
@@ -21,7 +27,7 @@ func (e httpError) Error() string {
 	return e.message
 }
 
-func newHttpError(message string, code int) httpError {
+func newHTTPError(message string, code int) httpError {
 	return httpError{code: code, message: message}
 }
 

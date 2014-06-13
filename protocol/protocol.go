@@ -66,3 +66,18 @@ type ConfigResponse struct {
 	Data  *blobserver.Config `json:"Data"`
 	Error map[string]string  `json:"Error,omitempty"`
 }
+
+// StatResponse is the JSON document returned from the blob batch
+// stat handler.
+type StatResponse struct {
+	Stat  []RefInfo         `json:"Data"`
+	Error map[string]string `json:"Error,omitempty"`
+}
+
+func (p *StatResponse) MarshalJSON() ([]byte, error) {
+	v := *p
+	if v.Stat == nil {
+		v.Stat = []RefInfo{}
+	}
+	return json.Marshal(v)
+}

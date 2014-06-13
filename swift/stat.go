@@ -6,8 +6,8 @@ package swift
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/ncw/swift"
 	"github.com/simonz05/blobserver/blob"
 	"github.com/simonz05/util/log"
 	"github.com/simonz05/util/syncutil"
@@ -15,7 +15,7 @@ import (
 
 var statGate = syncutil.NewGate(20) // arbitrary
 
-func (sto *swiftStorage) StatBlobs(dest chan<- blob.SizedRef, blobs []blob.Ref) error {
+func (sto *swiftStorage) StatBlobs(dest chan<- blob.SizedInfoRef, blobs []blob.Ref) error {
 	var wg syncutil.Group
 
 	for _, br := range blobs {
@@ -24,14 +24,18 @@ func (sto *swiftStorage) StatBlobs(dest chan<- blob.SizedRef, blobs []blob.Ref) 
 		wg.Go(func() error {
 			defer statGate.Done()
 			ref, cont := sto.refContainer(br)
-			log.Println("Stat:", cont, ref)
 			info, _, err := sto.conn.Object(cont, ref)
+			log.Println("Stat:", info, err)
 
 			if err == nil {
-				dest <- blob.SizedRef{Ref: br, Size: uint32(info.Bytes)}
+				dest <- blob.SizedInfoRef{
+					Ref:  br,
+					Size: uint32(info.Bytes),
+					MD5:  info.Hash,
+				}
 				return nil
 			}
-			if err == os.ErrNotExist {
+			if err == swift.ObjectNotFound {
 				return nil
 			}
 			return fmt.Errorf("error statting %v: %v", br, err)

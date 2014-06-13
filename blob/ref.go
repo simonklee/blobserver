@@ -46,16 +46,18 @@ func NewRef(name string) Ref {
 	return Ref{Path: string(buf)}
 }
 
-func (r Ref) String() string {
-	return r.Path
+func NewRefFilename(name string) Ref {
+	ext := filepath.Ext(name)
+
+	if ext == "" {
+		name += ".bin"
+	}
+
+	return Ref{Path: name}
 }
 
-func (r Ref) Sum32() uint32 {
-	var v uint32
-	for _, b := range r.Path[:4] {
-		v = v<<8 | uint32(b)
-	}
-	return v
+func (r Ref) String() string {
+	return r.Path
 }
 
 func (r *Ref) SetHash(h hash.Hash) {
@@ -90,10 +92,11 @@ func NewSizedRef(name string) SizedRef {
 	return SizedRef{Ref: NewRef(name)}
 }
 
-// SizedRef is like a Ref but includes a size.
+// SizedInfoRef is like a Ref but includes a size and MD5.
 type SizedInfoRef struct {
 	Ref
 	Size uint32
+	MD5  string
 }
 
 var bufPool = make(chan []byte, 20)

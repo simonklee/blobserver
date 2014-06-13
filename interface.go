@@ -44,11 +44,11 @@ type BlobStatter interface {
 	// or nil.  Stat() should NOT close the channel.
 	// TODO(bradfitz): redefine this to close the channel? Or document
 	// better what the synchronization rules are.
-	StatBlobs(dest chan<- blob.SizedRef, blobs []blob.Ref) error
+	StatBlobs(dest chan<- blob.SizedInfoRef, blobs []blob.Ref) error
 }
 
-func StatBlob(bs BlobStatter, br blob.Ref) (sb blob.SizedRef, err error) {
-	c := make(chan blob.SizedRef, 1)
+func StatBlob(bs BlobStatter, br blob.Ref) (sb blob.SizedInfoRef, err error) {
+	c := make(chan blob.SizedInfoRef, 1)
 	err = bs.StatBlobs(c, []blob.Ref{br})
 	if err != nil {
 		return

@@ -38,7 +38,11 @@ func startServer() {
 		panic(err)
 	}
 
-	log.Severity = log.LevelError
+	if testing.Verbose() {
+		log.Severity = log.LevelInfo
+	} else {
+		log.Severity = log.LevelError
+	}
 	server = httptest.NewServer(nil)
 	serverAddr = server.Listener.Addr().String()
 }
@@ -61,7 +65,7 @@ func TestServer(t *testing.T) {
 
 	for i, v := range contents {
 		filename := md5Hash(v)
-		req, err := multipartRequest("/blob/upload/", filename, v)
+		req, err := uploadRequest("/blob/upload/", filename, v)
 
 		if err != nil {
 			t.Fatalf("err creating request #%d - %v", i, err)
@@ -86,6 +90,47 @@ func TestServer(t *testing.T) {
 		blobSizedRefs = append(blobSizedRefs, blob.SizedRef{Ref: br1.Ref, Size: br1.Size})
 	}
 
+	t.Logf("test stat")
+	statArgs := url.Values{}
+
+	for _, v := range blobRefs {
+		statArgs.Add("blob", v.String())
+	}
+
+	uri := absURL("/blob/stat/", statArgs)
+	req, err := http.NewRequest("GET", uri, nil)
+	ast.Nil(err)
+
+	res, err := doReq(req)
+
+	if err != nil {
+		t.Fatalf("err sending stat request %v", err)
+	}
+
+	ast.Equal(200, res.StatusCode)
+	ur := new(protocol.StatResponse)
+	parseResponse(t, res, ur)
+	ast.Equal(len(blobRefs), len(ur.Stat))
+
+	for i, v := range blobSizedRefs {
+		url := absURL(fmt.Sprintf("/blob/stat/%s/", v.Path), nil)
+		req, err := http.NewRequest("GET", url, nil)
+		ast.Nil(err)
+		res, err := doReq(req)
+
+		if err != nil {
+			t.Fatalf("err sending request #%d - %v", i, err)
+		}
+
+		ast.Equal(200, res.StatusCode)
+		ur := new(protocol.StatResponse)
+		parseResponse(t, res, ur)
+		ast.Equal(1, len(ur.Stat))
+		got := ur.Stat[0]
+		ast.Equal(v.Path, got.Path)
+		ast.Equal(v.Size, got.Size)
+	}
+
 	t.Logf("test remove")
 
 	for i, v := range blobRefs {
@@ -93,7 +138,7 @@ func TestServer(t *testing.T) {
 		req, err := http.NewRequest("DELETE", url, nil)
 
 		if err != nil {
-			return
+			t.Fatal(err)
 		}
 
 		res, err := doReq(req)
@@ -108,7 +153,7 @@ func TestServer(t *testing.T) {
 	}
 }
 
-func multipartRequest(path, name, contents string) (req *http.Request, err error) {
+func uploadRequest(path, name, contents string) (req *http.Request, err error) {
 	var b bytes.Buffer
 	w := multipart.NewWriter(&b)
 	part, err := w.CreateFormFile("file", name)
@@ -181,24 +226,11 @@ func parseResponse(t *testing.T, res *http.Response, v interface{}) {
 	}
 }
 
-func toURL(args map[string]string) (values url.Values) {
-	values = url.Values{}
-
-	if args != nil {
-		for k, v := range args {
-			values.Add(k, v)
-		}
-	}
-
-	return
-}
-
-func absURL(endpoint string, args map[string]string) string {
-	values := toURL(args)
+func absURL(endpoint string, args url.Values) string {
 	var params string
 
-	if len(values) > 0 {
-		params = fmt.Sprintf("?%s", values.Encode())
+	if args != nil && len(args) > 0 {
+		params = fmt.Sprintf("?%s", args.Encode())
 	}
 
 	return fmt.Sprintf("http://%s/v1/api/blobserver%s%s", serverAddr, endpoint, params)
