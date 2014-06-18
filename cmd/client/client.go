@@ -367,18 +367,6 @@ func parseResponse(res *http.Response, v interface{}) {
 	}
 }
 
-func toURL(args map[string]string) (values url.Values) {
-	values = url.Values{}
-
-	if args != nil {
-		for k, v := range args {
-			values.Add(k, v)
-		}
-	}
-
-	return
-}
-
 func absURL(endpoint string, args url.Values) string {
 	var params string
 
@@ -387,10 +375,4 @@ func absURL(endpoint string, args url.Values) string {
 	}
 
 	return fmt.Sprintf("%s%s%s", *serverAddr, endpoint, params)
-}
-
-func MD5Hash(data []byte) string {
-	hasher := md5.New()
-	hasher.Write(data)
-	return hex.EncodeToString(hasher.Sum(nil))
 }
