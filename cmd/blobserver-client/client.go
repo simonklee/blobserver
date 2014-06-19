@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/simonz05/blobserver/protocol"
 	"github.com/simonz05/util/log"
@@ -24,8 +23,8 @@ import (
 
 var (
 	serverAddr = flag.String("addr", "http://localhost:6064/v1/api/blobserver", "server addr")
-	counter    int
-	lastPrint  time.Time
+	outputType = flag.String("output", "json", "print result")
+	baseURL    string
 )
 
 func main() {
@@ -35,19 +34,51 @@ func main() {
 	if flag.NArg() == 0 {
 		log.Fatal("Expected file argument missing")
 	}
-	urls, _ := multiUploader(flag.Args())
-	log.Println(urls)
-	return
+
+	bURL, err := findBaseURL()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	baseURL = bURL
+	res, _ := multiUploader(flag.Args())
+	var enc resourceEncoder
+
+	switch *outputType {
+	case "json":
+		enc = newJSONEncoder(os.Stdout)
+	default:
+		os.Exit(0)
+	}
+
+	err = enc.Encode(res)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
-func count() {
-	counter++
+type resourceEncoder interface {
+	Encode(res resources) error
+}
 
-	if time.Since(lastPrint) > time.Second {
-		log.Printf("uploads per second %d\n", counter)
-		lastPrint = time.Now()
-		counter = 0
+type JSONEncoder struct {
+	w *json.Encoder
+}
+
+func newJSONEncoder(w io.Writer) *JSONEncoder {
+	return &JSONEncoder{w: json.NewEncoder(w)}
+}
+
+func (e *JSONEncoder) Encode(res resources) error {
+	out := make(map[string]*resource, len(res))
+
+	for _, v := range res {
+		out[v.Path] = v
 	}
+
+	return e.w.Encode(out)
 }
 
 func findBaseURL() (string, error) {
@@ -68,13 +99,30 @@ func findBaseURL() (string, error) {
 
 type resource struct {
 	Filename string
-	Path     string
+	Path     string `json:"-"`
 	URL      string
-	Created  bool
 	MD5      string
+	Created  bool
 }
 
-func multiUploader(paths []string) (files []*resource, err error) {
+func (r *resource) setURL(path string) {
+	r.URL = baseURL + path
+}
+
+type resources []*resource
+
+func (res resources) findByPath(path string) *resource {
+	filename := pathToFilename(path)
+
+	for j := 0; j < len(res); j++ {
+		if res[j].Filename == filename {
+			return res[j]
+		}
+	}
+	return nil
+}
+
+func multiUploader(paths []string) (files resources, err error) {
 	files, err = multiStat(paths)
 
 	if err != nil {
@@ -84,7 +132,7 @@ func multiUploader(paths []string) (files []*resource, err error) {
 	toUpload := make([]string, 0, len(paths))
 
 	for _, res := range files {
-		if !res.Created {
+		if res.Created {
 			toUpload = append(toUpload, res.Path)
 		} else {
 			log.Printf("%s exists - skipping", res.Path)
@@ -96,7 +144,7 @@ func multiUploader(paths []string) (files []*resource, err error) {
 	}
 
 	log.Printf("upload %d %v", len(toUpload), toUpload)
-	err = multiUpload(toUpload)
+	err = multiUpload(files, toUpload)
 	return files, err
 }
 
@@ -110,8 +158,8 @@ func pathToFilename(path string) string {
 	return path
 }
 
-func multiStat(paths []string) ([]*resource, error) {
-	results := make([]*resource, 0, len(paths))
+func multiStat(paths []string) (resources, error) {
+	results := make(resources, 0, len(paths))
 	values := url.Values{}
 
 	for _, path := range paths {
@@ -134,6 +182,7 @@ func multiStat(paths []string) ([]*resource, error) {
 			MD5:      resMD5,
 			Filename: filepath.Base(path),
 			Path:     path,
+			Created:  true,
 		}
 
 		results = append(results, res)
@@ -159,36 +208,23 @@ func multiStat(paths []string) ([]*resource, error) {
 		return nil, err
 	}
 
-	baseURL, err := findBaseURL()
-
-	if err != nil {
-		return nil, err
-	}
-
 	for _, si := range sr.Stat {
-		filename := pathToFilename(si.Path)
-		var cur *resource
-
-		for j := 0; j < len(results); j++ {
-			if results[j].Filename == filename {
-				cur = results[j]
-			}
-		}
+		cur := results.findByPath(si.Path)
 
 		if cur == nil {
 			log.Errorf("unexpected result %v", si)
 			continue
 		}
 
-		cur.Created = si.MD5 == cur.MD5
+		cur.Created = si.MD5 != cur.MD5
 		cur.URL = baseURL + si.Path
 	}
 
 	return results, nil
 }
 
-func multiUpload(paths []string) error {
-	req, err := multiMultipartRequest("/blob/upload/", paths)
+func multiUpload(results resources, toUpload []string) error {
+	req, err := multiMultipartRequest("/blob/upload/", toUpload)
 
 	if err != nil {
 		return err
@@ -207,12 +243,20 @@ func multiUpload(paths []string) error {
 	ur := new(protocol.UploadResponse)
 	parseResponse(res, ur)
 
-	if len(ur.Received) != len(paths) {
-		return fmt.Errorf("Expected %d received got %d", len(paths), len(ur.Received))
+	if len(ur.Received) != len(toUpload) {
+		return fmt.Errorf("Expected %d received got %d", len(toUpload), len(ur.Received))
 	}
 
 	for _, rec := range ur.Received {
 		log.Println("got:", rec.Path)
+		cur := results.findByPath(rec.Path)
+
+		if cur == nil {
+			log.Errorf("unexpected result %v", rec)
+			continue
+		}
+
+		cur.URL = baseURL + rec.Path
 	}
 
 	return nil
