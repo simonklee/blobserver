@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/simonz05/blobserver/protocol"
@@ -25,8 +24,6 @@ import (
 
 var (
 	serverAddr = flag.String("addr", "http://localhost:6064/v1/api/blobserver", "server addr")
-	workers    = flag.Int("workers", 2, "worker count")
-	useMulti   = flag.Bool("multi", false, "use multi uploader")
 	counter    int
 	lastPrint  time.Time
 )
@@ -38,26 +35,9 @@ func main() {
 	if flag.NArg() == 0 {
 		log.Fatal("Expected file argument missing")
 	}
-
-	if *useMulti {
-		multiUploader(flag.Args())
-		return
-	}
-
-	queue := make(chan string)
-	var wg sync.WaitGroup
-
-	for i := 0; i < *workers; i++ {
-		go uploader(queue, &wg)
-	}
-
-	lastPrint = time.Now()
-
-	for _, filename := range flag.Args() {
-		wg.Add(1)
-		queue <- filename
-	}
-	wg.Wait()
+	urls, _ := multiUploader(flag.Args())
+	log.Println(urls)
+	return
 }
 
 func count() {
@@ -70,68 +50,94 @@ func count() {
 	}
 }
 
-func uploader(ch chan string, wg *sync.WaitGroup) {
-	for {
-		path := <-ch
-		err := handleUpload(path)
-
-		if err != nil {
-			log.Error(err)
-		}
-		wg.Done()
-		count()
-	}
-}
-
-func multiUploader(paths []string) error {
-	res, err := multiStat(paths)
+func findBaseURL() (string, error) {
+	res, err := http.Get(absURL("/config/", nil))
 
 	if err != nil {
-		return err
+		return "", err
+	}
+
+	cr := new(protocol.ConfigResponse)
+
+	if err := parseResponse(res, cr); err != nil {
+		return "", err
+	}
+
+	return cr.Data.CDNUrl, nil
+}
+
+type resource struct {
+	Filename string
+	Path     string
+	URL      string
+	Created  bool
+	MD5      string
+}
+
+func multiUploader(paths []string) (files []*resource, err error) {
+	files, err = multiStat(paths)
+
+	if err != nil {
+		return nil, err
 	}
 
 	toUpload := make([]string, 0, len(paths))
 
-	for path, ok := range res {
-		if !ok {
-			toUpload = append(toUpload, path)
+	for _, res := range files {
+		if !res.Created {
+			toUpload = append(toUpload, res.Path)
 		} else {
-			log.Printf("%s exists - skipping", path)
+			log.Printf("%s exists - skipping", res.Path)
 		}
 	}
 
 	if len(toUpload) == 0 {
-		return nil
+		return files, nil
 	}
 
 	log.Printf("upload %d %v", len(toUpload), toUpload)
-	return multiUpload(toUpload)
+	err = multiUpload(toUpload)
+	return files, err
 }
 
-func multiStat(paths []string) (map[string]bool, error) {
-	md5s := make(map[string]string, len(paths))
-	results := make(map[string]bool, len(paths))
+func pathToFilename(path string) string {
+	pc := strings.SplitN(path, "/", 2)
+
+	if len(pc) == 2 {
+		return pc[1]
+	}
+
+	return path
+}
+
+func multiStat(paths []string) ([]*resource, error) {
+	results := make([]*resource, 0, len(paths))
 	values := url.Values{}
 
 	for _, path := range paths {
-		file, err := os.Open(path)
+		fp, err := os.Open(path)
 
 		if err != nil {
 			return nil, err
 		}
 
 		hasher := md5.New()
-		io.Copy(hasher, file)
-		md5Exp := hex.EncodeToString(hasher.Sum(nil))
-		err = file.Close()
+		io.Copy(hasher, fp)
+		resMD5 := hex.EncodeToString(hasher.Sum(nil))
+		err = fp.Close()
 
 		if err != nil {
 			return nil, err
 		}
 
-		md5s[path] = md5Exp
-		results[path] = false
-		values.Add("blob", filepath.Base(path))
+		res := &resource{
+			MD5:      resMD5,
+			Filename: filepath.Base(path),
+			Path:     path,
+		}
+
+		results = append(results, res)
+		values.Add("blob", res.Filename)
 	}
 
 	uri := absURL("/blob/stat/", values)
@@ -148,10 +154,34 @@ func multiStat(paths []string) (map[string]bool, error) {
 	}
 
 	sr := new(protocol.StatResponse)
-	parseResponse(res, sr)
+
+	if err := parseResponse(res, sr); err != nil {
+		return nil, err
+	}
+
+	baseURL, err := findBaseURL()
+
+	if err != nil {
+		return nil, err
+	}
 
 	for _, si := range sr.Stat {
-		results[si.Path] = md5s[si.Path] == si.MD5
+		filename := pathToFilename(si.Path)
+		var cur *resource
+
+		for j := 0; j < len(results); j++ {
+			if results[j].Filename == filename {
+				cur = results[j]
+			}
+		}
+
+		if cur == nil {
+			log.Errorf("unexpected result %v", si)
+			continue
+		}
+
+		cur.Created = si.MD5 == cur.MD5
+		cur.URL = baseURL + si.Path
 	}
 
 	return results, nil
@@ -231,129 +261,12 @@ func multiMultipartRequest(endpoint string, paths []string) (*http.Request, erro
 	return req, nil
 }
 
-func handleUpload(path string) error {
-	ok, err := stat(path)
-
-	if err != nil {
-		return err
-	}
-
-	if ok {
-		log.Printf("%s exists - skipping", path)
-		return nil
-	}
-
-	log.Printf("%s upload", path)
-	return upload(path)
-}
-
-func stat(path string) (bool, error) {
-	file, err := os.Open(path)
-
-	if err != nil {
-		return false, err
-	}
-
-	defer file.Close()
-	filename := filepath.Base(path)
-	uri := absURL("/blob/stat/", url.Values{"blob": []string{filename}})
-	req, err := http.NewRequest("GET", uri, nil)
-
-	if err != nil {
-		return false, err
-	}
-
-	res, err := http.DefaultClient.Do(req)
-
-	if err != nil {
-		return false, err
-	}
-
-	sr := new(protocol.StatResponse)
-	parseResponse(res, sr)
-
-	if len(sr.Stat) != 1 {
-		return false, nil
-	}
-
-	si := sr.Stat[0]
-	hasher := md5.New()
-	io.Copy(hasher, file)
-	md5Exp := hex.EncodeToString(hasher.Sum(nil))
-	return si.MD5 == md5Exp, nil
-}
-
-func upload(path string) error {
-	file, err := os.Open(path)
-
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	filename := filepath.Base(path)
-	req, err := multipartRequest("/blob/upload/", filename, file)
-
-	if err != nil {
-		return err
-	}
-
-	res, err := http.DefaultClient.Do(req)
-
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode != 201 {
-		return fmt.Errorf("Unexpected status code %d", res.StatusCode)
-	}
-
-	ur := new(protocol.UploadResponse)
-	parseResponse(res, ur)
-
-	if len(ur.Received) != 1 {
-		return fmt.Errorf("Expected 1 received got %d", len(ur.Received))
-	}
-
-	log.Println(ur.Received[0].Path)
-	return nil
-}
-
-func multipartRequest(path, filename string, file io.Reader) (req *http.Request, err error) {
-	var b bytes.Buffer
-	w := multipart.NewWriter(&b)
-	log.Print(filename)
-	part, err := w.CreateFormFile("file", filename)
-
-	if err != nil {
-		w.Close()
-		return
-	}
-
-	if _, err = io.Copy(part, file); err != nil {
-		w.Close()
-		return
-	}
-
-	w.Close()
-
-	uri := absURL(path, url.Values{"use-filename": []string{"true"}})
-	req, err = http.NewRequest("POST", uri, &b)
-
-	if err != nil {
-		return
-	}
-
-	// content type, contains the boundary.
-	req.Header.Set("Content-Type", w.FormDataContentType())
-	return
-}
-
-func parseResponse(res *http.Response, v interface{}) {
+func parseResponse(res *http.Response, v interface{}) error {
 	defer res.Body.Close()
 
 	if c := res.Header.Get("Content-Type"); !strings.Contains(c, "application/json") {
 		log.Error("Unexpected Content-Type")
+		return fmt.Errorf("Unexpected Content-Type")
 	}
 
 	reader := bufio.NewReader(res.Body)
@@ -361,10 +274,7 @@ func parseResponse(res *http.Response, v interface{}) {
 	err := json.Unmarshal(buf, v)
 	//fmt.Printf("%s\n", buf)
 	//err := json.NewDecoder(res.Body).Decode(v)
-
-	if err != nil {
-		log.Error(err)
-	}
+	return err
 }
 
 func absURL(endpoint string, args url.Values) string {

@@ -19,13 +19,14 @@ func (sto *swiftStorage) StatBlobs(dest chan<- blob.SizedInfoRef, blobs []blob.R
 	var wg syncutil.Group
 
 	for _, br := range blobs {
-		br := br
+		br := sto.createPathRef(br)
 		statGate.Start()
 		wg.Go(func() error {
 			defer statGate.Done()
 			ref, cont := sto.refContainer(br)
+			log.Println("REF:", ref, cont)
 			info, _, err := sto.conn.Object(cont, ref)
-			log.Println("Stat:", info, err)
+			log.Println("Stat:", info, err, ref, br.Path)
 
 			if err == nil {
 				dest <- blob.SizedInfoRef{
