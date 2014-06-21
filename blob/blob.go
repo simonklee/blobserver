@@ -48,6 +48,11 @@ func (b Blob) SizedRef() SizedRef {
 	return SizedRef{b.ref, b.size}
 }
 
+// SizedInfoRef returns the SizedInfoRef corresponding to the blob.
+func (b Blob) SizedInfoRef() SizedInfoRef {
+	return SizedInfoRef{Ref: b.ref, Size: b.size}
+}
+
 // Open returns an io.ReadCloser that can be used to read the blob
 // data. The caller must close the io.ReadCloser when finished.
 func (b Blob) Open() io.ReadCloser {

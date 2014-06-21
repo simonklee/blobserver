@@ -61,13 +61,13 @@ func (sto *fakeStorage) RemoveBlobs(blobs []blob.Ref) error {
 	return nil
 }
 
-func (sto *fakeStorage) StatBlobs(dest chan<- blob.SizedRef, blobs []blob.Ref) error {
+func (sto *fakeStorage) StatBlobs(dest chan<- blob.SizedInfoRef, blobs []blob.Ref) error {
 	for _, ref := range blobs {
 		b, ok := sto.blobs[ref.String()]
 		if !ok {
 			return errors.New("Blob not found")
 		}
-		dest <- b.SizedRef()
+		dest <- b.SizedInfoRef()
 	}
 	return nil
 }

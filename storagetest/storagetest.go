@@ -65,7 +65,7 @@ func Test(t *testing.T, fn func(*testing.T) (sto blobserver.Storage, cleanup fun
 		}
 		blobs = append(blobs, b1)
 		blobRefs = append(blobRefs, b1.BlobRef)
-		blobSizedRefs = append(blobSizedRefs, b1.SizedRef())
+		blobSizedRefs = append(blobSizedRefs, b1s)
 		md5s = append(md5s, hex.EncodeToString(b1s.Hash().Sum(nil)))
 	}
 	b1 := blobs[0]
@@ -84,7 +84,7 @@ func Test(t *testing.T, fn func(*testing.T) (sto blobserver.Storage, cleanup fun
 	}
 
 	t.Logf("Testing Stat")
-	dest := make(chan blob.SizedRef)
+	dest := make(chan blob.SizedInfoRef)
 	go func() {
 		if err := sto.StatBlobs(dest, blobRefs); err != nil {
 			t.Fatalf("error stating blobs %s: %v", blobRefs, err)
@@ -125,7 +125,7 @@ func testSizedBlob(t *testing.T, r io.Reader, b1 blob.Ref, size int64, hash stri
 	}
 }
 
-func testStat(t *testing.T, enum <-chan blob.SizedRef, want []blob.SizedRef) {
+func testStat(t *testing.T, enum <-chan blob.SizedInfoRef, want []blob.SizedRef) {
 	// blobs may arrive in ANY order
 	m := make(map[string]int, len(want))
 	for i, sb := range want {
@@ -141,8 +141,8 @@ func testStat(t *testing.T, enum <-chan blob.SizedRef, want []blob.SizedRef) {
 		if wanted.Size != sb.Size {
 			t.Fatalf("received blob size is %d, wanted %d for &%d", sb.Size, wanted.Size, i)
 		}
-		if wanted.Ref != sb.Ref {
-			t.Fatalf("received blob ref mismatch &%d: wanted %s, got %s", i, sb.Ref, wanted.Ref)
+		if wanted.Ref.String() != sb.Ref.String() {
+			t.Fatalf("received blob ref mismatch &%d:\n%s\n%s", i, wanted.Ref, sb.Ref)
 		}
 		i++
 		if i >= len(want) {
