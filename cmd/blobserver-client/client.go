@@ -72,10 +72,10 @@ func newJSONEncoder(w io.Writer) *JSONEncoder {
 }
 
 func (e *JSONEncoder) Encode(res resources) error {
-	out := make(map[string]*resource, len(res))
+	out := make(map[string]string, len(res))
 
 	for _, v := range res {
-		out[v.Path] = v
+		out[v.Path] = v.URL
 	}
 
 	return e.w.Encode(out)
