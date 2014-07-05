@@ -1,0 +1,101 @@
+{
+	"ImportPath": "github.com/simonz05/blobserver",
+	"GoVersion": "go1.3",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "git.tideland.biz/goas/errors",
+			"Comment": "v2.3.0",
+			"Rev": "e149ed628422e700c9ed79c0614356769807934a"
+		},
+		{
+			"ImportPath": "git.tideland.biz/goas/logger",
+			"Comment": "v2.3.0",
+			"Rev": "e149ed628422e700c9ed79c0614356769807934a"
+		},
+		{
+			"ImportPath": "git.tideland.biz/goas/loop",
+			"Comment": "v2.3.0",
+			"Rev": "e149ed628422e700c9ed79c0614356769807934a"
+		},
+		{
+			"ImportPath": "git.tideland.biz/goas/monitoring",
+			"Comment": "v2.3.0",
+			"Rev": "e149ed628422e700c9ed79c0614356769807934a"
+		},
+		{
+			"ImportPath": "github.com/BurntSushi/toml",
+			"Rev": "2dff11163ee667d51dcc066660925a92ce138deb"
+		},
+		{
+			"ImportPath": "github.com/garyburd/redigo/redis",
+			"Rev": "1856a87f5528bfd8caea03f69a69d8443bc432ed"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "1be7a086a5fd6440ef16fe96baeda0c78282b980"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "9ede152210fa25c1377d33e867cb828c19316445"
+		},
+		{
+			"ImportPath": "github.com/ncw/swift",
+			"Rev": "9167af04965fc80d4842d73108b940bd37c9af38"
+		},
+		{
+			"ImportPath": "github.com/nu7hatch/gouuid",
+			"Rev": "179d4d0c4d8d407a32af483c2354df1d2c91e6c3"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/amazon/s3",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/assert",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/handler",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/httputil",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/kvstore",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/log",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/pat",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/raven",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/readerutil",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/session",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/sig",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		},
+		{
+			"ImportPath": "github.com/simonz05/util/syncutil",
+			"Rev": "a0d061f47dce719a09f47a9e82793c1c8b6fc509"
+		}
+	]
+}
