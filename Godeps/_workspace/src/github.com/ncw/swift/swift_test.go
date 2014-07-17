@@ -20,6 +20,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -96,6 +97,27 @@ func TestAuthenticate(t *testing.T) {
 	if !c.Authenticated() {
 		t.Fatal("Not authenticated")
 	}
+}
+
+// Attempt to trigger a race in authenticate
+//
+// Run with -race to test
+func TestAuthenticateRace(t *testing.T) {
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := c.Authenticate()
+			if err != nil {
+				t.Fatal("Auth failed", err)
+			}
+			if !c.Authenticated() {
+				t.Fatal("Not authenticated")
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 // Test a connection can be serialized and unserialized with JSON
@@ -434,6 +456,12 @@ func TestObjectCreate(t *testing.T) {
 	}
 	if contents != expected {
 		t.Error("Contents wrong")
+	}
+
+	// Test writing on closed file
+	n, err := out.Write([]byte{0})
+	if err == nil || n != 0 {
+		t.Error("Expecting error and n == 0 writing on closed file", err, n)
 	}
 
 	// Now with hash instead

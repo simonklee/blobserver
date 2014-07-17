@@ -7,7 +7,9 @@ Language
 
 See here for package docs
 
-  http://go.pkgdoc.org/github.com/ncw/swift
+  http://godoc.org/github.com/ncw/swift
+
+[![Build Status](https://travis-ci.org/ncw/swift.png)](https://travis-ci.org/ncw/swift)
 
 Install
 -------
@@ -21,7 +23,7 @@ Usage
 
 See here for full package docs
 
-- http://go.pkgdoc.org/github.com/ncw/swift
+- http://godoc.org/github.com/ncw/swift
 
 Here is a short example from the docs
 
@@ -96,3 +98,5 @@ Contributors
 - Stephen <yo@groks.org>
 - platformpurple <stephen@platformpurple.com>
 - Paul Querna <pquerna@apache.org>
+- Livio Soares <liviobs@gmail.com>
+- thesyncim <thesyncim@gmail.com>

@@ -328,9 +328,10 @@ func TestInternalAuthenticate(t *testing.T) {
 }
 
 func TestInternalAuthenticateDenied(t *testing.T) {
-	server.AddCheck(t).Error(401, "DENIED")
+	server.AddCheck(t).Error(400, "Bad request")
 	server.AddCheck(t).Error(401, "DENIED")
 	defer server.Finished()
+	c.UnAuthenticate()
 	err := c.Authenticate()
 	if err != AuthorizationFailed {
 		t.Fatal("Expecting AuthorizationFailed", err)
