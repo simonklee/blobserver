@@ -6,26 +6,6 @@
 	],
 	"Deps": [
 		{
-			"ImportPath": "git.tideland.biz/goas/errors",
-			"Comment": "v2.3.0",
-			"Rev": "e149ed628422e700c9ed79c0614356769807934a"
-		},
-		{
-			"ImportPath": "git.tideland.biz/goas/logger",
-			"Comment": "v2.3.0",
-			"Rev": "e149ed628422e700c9ed79c0614356769807934a"
-		},
-		{
-			"ImportPath": "git.tideland.biz/goas/loop",
-			"Comment": "v2.3.0",
-			"Rev": "e149ed628422e700c9ed79c0614356769807934a"
-		},
-		{
-			"ImportPath": "git.tideland.biz/goas/monitoring",
-			"Comment": "v2.3.0",
-			"Rev": "e149ed628422e700c9ed79c0614356769807934a"
-		},
-		{
 			"ImportPath": "github.com/BurntSushi/toml",
 			"Rev": "2dff11163ee667d51dcc066660925a92ce138deb"
 		},
@@ -51,51 +31,67 @@
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/amazon/s3",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/assert",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/handler",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/httputil",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/kvstore",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/log",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/pat",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/raven",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/readerutil",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/session",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/sig",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
 		},
 		{
 			"ImportPath": "github.com/simonz05/util/syncutil",
-			"Rev": "0e4d6287e64a9047090fc04f2268064f752d05e0"
+			"Rev": "eb16508a48922db46edf496384f5afdda8c4adbf"
+		},
+		{
+			"ImportPath": "github.com/tideland/goas/v2/logger",
+			"Rev": "0e02cf7657fc2b1ec8d1ad31c938461906496855"
+		},
+		{
+			"ImportPath": "github.com/tideland/goas/v2/loop",
+			"Rev": "0e02cf7657fc2b1ec8d1ad31c938461906496855"
+		},
+		{
+			"ImportPath": "github.com/tideland/goas/v2/monitoring",
+			"Rev": "0e02cf7657fc2b1ec8d1ad31c938461906496855"
+		},
+		{
+			"ImportPath": "github.com/tideland/goas/v3/errors",
+			"Rev": "0e02cf7657fc2b1ec8d1ad31c938461906496855"
 		}
 	]
 }

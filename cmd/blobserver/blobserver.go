@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"git.tideland.biz/goas/monitoring"
+	"github.com/tideland/goas/v2/monitoring"
 	"github.com/simonz05/blobserver"
 	"github.com/simonz05/blobserver/config"
 	_ "github.com/simonz05/blobserver/s3"
