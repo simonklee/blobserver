@@ -4,8 +4,11 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"runtime"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -17,77 +20,127 @@ var (
 	cdnAddr   = flag.String("cdn", "", "cdn addr")
 	sqlDSN    = flag.String("sql", "root:@tcp(localhost:3306)/testing?utf8&parseTime=True", "MySQL Data Source Name")
 	workers   = flag.Int("workers", 32, "worker count")
-	counter   int
+	outfile   = flag.String("out", "", "out file")
 	lastPrint time.Time
+	counter   *Counter
+	errors    *ErrorCollector
 )
 
-func main() {
-	flag.Parse()
-	log.Println("start verifier")
+func init() {
+	counter = NewCounter()
+	errors = NewErrorCollector()
+}
 
-	inch := make(chan string)
-	errch := make(chan error)
+type Blob struct {
+	BlobPath string
+	Created  time.Time
+}
 
-	for i := 0; i < *workers; i++ {
-		go statter(errch, inch)
+func (b *Blob) URL() string {
+	return absURL(b.BlobPath)
+}
+
+type Counter struct {
+	lastPrint time.Time
+	cnt       int
+	tot       int
+	incrCh    chan bool
+	done      chan bool
+}
+
+func NewCounter() *Counter {
+	c := &Counter{
+		lastPrint: time.Now(),
+		incrCh:    make(chan bool, 1024),
 	}
 
-	lastPrint = time.Now()
-	err := fetcher(inch)
+	go c.listen()
+	return c
+}
 
-	if err != nil {
-		log.Error(err)
-		os.Exit(1)
-	}
-	errors := make([]error, 0)
-	for {
-		select {
-		case <-time.After(time.Second * 10):
-			goto done
-		case err := <-errch:
-			errors = append(errors, err)
+func (c *Counter) incr() {
+	c.incrCh <- true
+}
+
+func (c *Counter) listen() {
+	for _ = range c.incrCh {
+		c.cnt++
+		c.tot++
+
+		if time.Since(c.lastPrint) > time.Second {
+			fmt.Printf("tot %d reqs per second %d\n", c.tot, c.cnt)
+			c.lastPrint = time.Now()
+			c.cnt = 0
 		}
 	}
-done:
-	log.Println(len(errors))
-	for _, e := range errors {
-		fmt.Printf("%s%s\n", *cdnAddr, e)
-	}
-	close(inch)
-	close(errch)
 }
 
-func count() {
-	counter++
+func (c *Counter) total() int {
+	return c.tot
+}
 
-	if time.Since(lastPrint) > time.Second {
-		fmt.Printf("stat per second %d\n", counter)
-		lastPrint = time.Now()
-		counter = 0
+type Error struct {
+	code int
+	blob *Blob
+}
+
+type ErrorCollector struct {
+	tot    int
+	ch     chan *Error
+	errors []*Error
+}
+
+func NewErrorCollector() *ErrorCollector {
+	c := &ErrorCollector{
+		ch: make(chan *Error),
+	}
+
+	go c.listen()
+	return c
+}
+
+func (c *ErrorCollector) log(blob *Blob, code int) {
+	c.ch <- &Error{blob: blob, code: code}
+}
+
+func (c *ErrorCollector) listen() {
+	for err := range c.ch {
+		c.tot++
+		c.errors = append(c.errors, err)
 	}
 }
 
-func statter(errch chan error, in chan string) {
-	for blob := range in {
-		resp, err := http.Head(absURL(blob))
+func (c *ErrorCollector) String() string {
+	out := fmt.Sprintf(`
+	total: %d
+`, c.tot)
+
+	for _, err := range c.errors {
+		out += fmt.Sprintf("%s %s\n", err.blob.BlobPath, err.blob.URL())
+	}
+
+	return out
+}
+
+func statter(queue chan *Blob, wg *sync.WaitGroup) {
+	for blob := range queue {
+		resp, err := http.Head(blob.URL())
 
 		if err != nil {
 			log.Errorf("err creating request %v", err)
 		}
 
-		if resp.StatusCode == 404 {
-			errch <- fmt.Errorf(blob)
+		if resp.StatusCode != 200 {
+			//log.Errorf("Unexpected status code %d", resp.StatusCode)
+			errors.log(blob, resp.StatusCode)
 		}
 
-		count()
+		counter.incr()
+		wg.Done()
 	}
 }
 
-func absURL(endpoint string) string {
-	return fmt.Sprintf("%s%s", *cdnAddr, endpoint)
-}
-
-func fetcher(queue chan string) error {
+func fetcher(queue chan *Blob, wg *sync.WaitGroup) error {
 	db, err := sql.Open("mysql", *sqlDSN)
 
 	if err != nil {
@@ -97,10 +150,46 @@ func fetcher(queue chan string) error {
 	sqlxDb := sqlx.NewDb(db, "mysql")
 	defer db.Close()
 
-	stmt := "SELECT BlobPath FROM Avatar"
-	stmt += " WHERE NOT BlobPath IS NULL"
+	stmt := "SELECT BlobPath, Created FROM AvatarRevision"
+	stmt += " WHERE BlobPath != ''"
 	stmt += " LIMIT ?, ?"
-	err = fetchBlobs(sqlxDb, queue, stmt)
+	err = fetchBlobs(sqlxDb, queue, stmt, wg)
+
+	if err != nil {
+		return err
+	}
+
+	stmt = "SELECT BlobPath, Created FROM Avatar"
+	stmt += " WHERE BlobPath != ''"
+	stmt += " LIMIT ?, ?"
+	err = fetchBlobs(sqlxDb, queue, stmt, wg)
+
+	if err != nil {
+		return err
+	}
+
+	stmt = "SELECT BlobPath, Created FROM Planet"
+	stmt += " WHERE BlobPath != ''"
+	stmt += " LIMIT ?, ?"
+	err = fetchBlobs(sqlxDb, queue, stmt, wg)
+
+	if err != nil {
+		return err
+	}
+
+	stmt = "SELECT BlobPath, Created FROM Item"
+	stmt += " WHERE BlobPath != ''"
+	stmt += " LIMIT ?, ?"
+	err = fetchBlobs(sqlxDb, queue, stmt, wg)
+
+	if err != nil {
+		return err
+	}
+
+	stmt = "SELECT BlobPath, PublishedTime FROM PublishedPlanet"
+	stmt += " WHERE BlobPath != ''"
+	stmt += " LIMIT ?, ?"
+	err = fetchBlobs(sqlxDb, queue, stmt, wg)
 
 	if err != nil {
 		return err
@@ -109,10 +198,11 @@ func fetcher(queue chan string) error {
 	return nil
 }
 
-func fetchBlobs(conn sqlx.Queryer, queue chan string, query string) error {
+func fetchBlobs(conn sqlx.Queryer, queue chan *Blob, query string, wg *sync.WaitGroup) error {
 	iterSize := 1024
 	offset := 0
 	limit := iterSize
+	tot := 0
 
 	for {
 		rows, err := conn.Queryx(query, offset, limit)
@@ -128,12 +218,15 @@ func fetchBlobs(conn sqlx.Queryer, queue chan string, query string) error {
 		for rows.Next() {
 			n++
 			var blobPath string
-			err = rows.Scan(&blobPath)
+			var created time.Time
+			err = rows.Scan(&blobPath, &created)
 
 			if err != nil {
 				return err
 			}
-			queue <- blobPath
+
+			queue <- &Blob{BlobPath: blobPath, Created: created}
+			wg.Add(1)
 		}
 
 		if err := rows.Err(); err != nil {
@@ -141,8 +234,9 @@ func fetchBlobs(conn sqlx.Queryer, queue chan string, query string) error {
 		}
 
 		rows.Close()
+		tot += n
 
-		if n == 0 {
+		if n == 0 || tot >= 6000 {
 			break
 		}
 
@@ -150,6 +244,51 @@ func fetchBlobs(conn sqlx.Queryer, queue chan string, query string) error {
 		limit += iterSize
 	}
 
-	log.Println("done")
 	return nil
+}
+
+func absURL(endpoint string) string {
+	return fmt.Sprintf("%s%s", *cdnAddr, endpoint)
+}
+
+func main() {
+	flag.Parse()
+	log.Println("start verifier")
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	if *cdnAddr == "" {
+		log.Fatal("expected cdn addr")
+		os.Exit(1)
+	}
+
+	var out io.Writer
+
+	if *outfile != "" {
+		fp, err := os.OpenFile(*outfile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+		if err != nil {
+			os.Exit(1)
+		}
+		defer fp.Close()
+		out = fp
+	} else {
+		out = os.Stdout
+	}
+
+	wg := new(sync.WaitGroup)
+	queue := make(chan *Blob, 4094)
+
+	for i := 0; i < *workers; i++ {
+		go statter(queue, wg)
+	}
+
+	lastPrint = time.Now()
+	err := fetcher(queue, wg)
+
+	if err != nil {
+		log.Error(err)
+		os.Exit(1)
+	}
+	wg.Wait()
+	close(queue)
+	fmt.Fprint(out, errors)
 }
