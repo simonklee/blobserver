@@ -188,8 +188,7 @@ func (c *Client) multiUpload(results Resources, toUpload []string) error {
 		cur := results.findByPath(rec.Path)
 
 		if cur == nil {
-			log.Errorf("unexpected result %v", rec)
-			continue
+			return fmt.Errorf("upload error %s", rec.Path)
 		}
 
 		cur.URL = c.CDNBaseURL + rec.Path
