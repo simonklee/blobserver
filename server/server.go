@@ -35,7 +35,7 @@ func setupServer(storage blobserver.Storage) (err error) {
 	router.StrictSlash(false)
 
 	// global middleware
-	wrapped := handler.Use(router, handler.LogHandler, handler.MeasureHandler, handler.RecoveryHandler)
+	wrapped := handler.Use(router, handler.LogHandler, handler.RecoveryHandler)
 	http.Handle("/", wrapped)
 	return nil
 }
