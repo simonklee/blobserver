@@ -76,6 +76,20 @@ func TestError(t *testing.T) {
 	assert.Equal(loop.Stopped, status, "loop is stopped")
 }
 
+// Test an error in a deferred function inside the loop.
+func TestDeferredError(t *testing.T) {
+	assert := asserts.NewTestingAssertion(t, true)
+	done := false
+	l := loop.Go(generateDeferredErrorBackend(&done))
+
+	assert.ErrorMatch(l.Stop(), "deferred error", "error has to be 'deferred error'")
+	assert.True(done, "backend has done")
+
+	status, _ := l.Error()
+
+	assert.Equal(loop.Stopped, status, "loop is stopped")
+}
+
 // Test recoverings after panics.
 func TestRecoverings(t *testing.T) {
 	assert := asserts.NewTestingAssertion(t, true)
@@ -193,6 +207,21 @@ func generateErrorBackend(done *bool) loop.LoopFunc {
 				return nil
 			case <-time.After(shortDelay):
 				return errors.New("timed out")
+			}
+		}
+	}
+}
+
+func generateDeferredErrorBackend(done *bool) loop.LoopFunc {
+	return func(l loop.Loop) (err error) {
+		defer func() { t := true; *done = t }()
+		defer func() {
+			err = errors.New("deferred error")
+		}()
+		for {
+			select {
+			case <-l.ShallStop():
+				return nil
 			}
 		}
 	}

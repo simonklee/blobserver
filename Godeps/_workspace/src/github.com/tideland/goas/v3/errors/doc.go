@@ -12,11 +12,35 @@
 //
 // The errors package allows to easily created formatted errors
 // with New() like with the fmt.Errorf function, but also with an
-// error code. This easily can be tested with IsError(). So own
-// error testing functions like IsMyFooError() bool can simply be
-// implemented. If an existing error shall be wrapped the function
-// Annotate() allows to pass that error. It can be retrieved using
-// Annotated() or Stack() for the full stack.
+// error code. Additionlly a Messages instance has to be passed
+// to map the error code to their according messages.
+//
+// If an error alreay exists use Annotate(). This way the original
+// error will be stored and can be retrieved with Annotated(). Also
+// its error message will be appended to the created error separated
+// by a colon.
+//
+// All errors additionally contain their package, filename and line
+// number. These information can be retrieved using Location(). In
+// case of a chain of annotated errors those can be retrieved as a
+// slice of errors with Stack().
 package errors
+
+//--------------------
+// IMPORTS
+//--------------------
+
+import (
+	"github.com/tideland/goas/v1/version"
+)
+
+//--------------------
+// VERSION
+//--------------------
+
+// PackageVersion returns the version of the version package.
+func PackageVersion() version.Version {
+	return version.New(3, 2, 0)
+}
 
 // EOF

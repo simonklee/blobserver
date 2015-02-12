@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"path"
 	"runtime"
+	"strings"
 )
 
 //--------------------
@@ -29,7 +30,7 @@ type Messages map[int]string
 func (m Messages) Format(code int, args ...interface{}) string {
 	if m == nil || m[code] == "" {
 		if len(args) == 0 {
-			return fmt.Sprintf("[E999] invalid error code '%d'")
+			return fmt.Sprintf("[ERRORS:999] invalid error code '%d'")
 		}
 		format := fmt.Sprintf("%v", args[0])
 		return fmt.Sprintf(format, args[1:]...)
@@ -44,10 +45,14 @@ func (m Messages) Format(code int, args ...interface{}) string {
 
 const (
 	ErrInvalidErrorType = iota + 1
+	ErrNotYetImplemented
+	ErrDeprecated
 )
 
-var messages = Messages{
-	ErrInvalidErrorType: "invalid error type: %T %q",
+var errorMessages = Messages{
+	ErrInvalidErrorType:  "invalid error type: %T %q",
+	ErrNotYetImplemented: "feature is not yet implemented: %q",
+	ErrDeprecated:        "feature is deprecated: %q",
 }
 
 //--------------------
@@ -56,32 +61,28 @@ var messages = Messages{
 
 // errorBox encapsulates an error.
 type errorBox struct {
-	err      error
-	code     int
-	msg      string
-	fileName string
-	line     int
+	err  error
+	code int
+	msg  string
+	info *callInfo
 }
 
 // newErrorBox creates an initialized error box.
 func newErrorBox(err error, code int, msgs Messages, args ...interface{}) *errorBox {
-	_, file, line, _ := runtime.Caller(2)
-	_, fileName := path.Split(file)
 	return &errorBox{
-		err:      err,
-		code:     code,
-		msg:      msgs.Format(code, args...),
-		fileName: fileName,
-		line:     line,
+		err:  err,
+		code: code,
+		msg:  msgs.Format(code, args...),
+		info: retrieveCallInfo(),
 	}
 }
 
 // Error returns the error as string.
 func (e *errorBox) Error() string {
 	if e.err != nil {
-		return fmt.Sprintf("[E%03d] %s: %v", e.code, e.msg, e.err)
+		return fmt.Sprintf("[%s:%03d] %s: %v", e.info.packagePart, e.code, e.msg, e.err)
 	}
-	return fmt.Sprintf("[E%03d] %s", e.code, e.msg)
+	return fmt.Sprintf("[%s:%03d] %s", e.info.packagePart, e.code, e.msg)
 }
 
 // Annotate creates an error wrapping another one together with a
@@ -117,15 +118,16 @@ func Annotated(err error) error {
 	if e, ok := err.(*errorBox); ok {
 		return e.err
 	}
-	return New(ErrInvalidErrorType, messages, err, err)
+	return New(ErrInvalidErrorType, errorMessages, err, err)
 }
 
-// Location returns the file name and the line of the error.
-func Location(err error) (string, int, error) {
+// Location returns the package and the file name as well as the line
+// number of the error.
+func Location(err error) (string, string, int, error) {
 	if e, ok := err.(*errorBox); ok {
-		return e.fileName, e.line, nil
+		return e.info.packageName, e.info.fileName, e.info.line, nil
 	}
-	return "", 0, New(ErrInvalidErrorType, messages, err, err)
+	return "", "", 0, New(ErrInvalidErrorType, errorMessages, err, err)
 }
 
 // Stack returns a slice of errors down to the first
@@ -141,6 +143,72 @@ func Stack(err error) []error {
 // type in case of testing for an annotated error.
 func IsInvalidTypeError(err error) bool {
 	return IsError(err, ErrInvalidErrorType)
+}
+
+// NotYetImplementedError returns the common error for a not yet
+// implemented feature.
+func NotYetImplementedError(feature string) error {
+	return New(ErrNotYetImplemented, errorMessages, feature)
+}
+
+// IsNotYetImplementedError checks if an error signals a not yet
+// implemented feature.
+func IsNotYetImplementedError(err error) bool {
+	return IsError(err, ErrNotYetImplemented)
+}
+
+// DeprecatedError returns the common error for a deprecated
+// feature.
+func DeprecatedError(feature string) error {
+	return New(ErrDeprecated, errorMessages, feature)
+}
+
+// IsDeprecatedError checks if an error signals deprecated
+// feature.
+func IsDeprecatedError(err error) bool {
+	return IsError(err, ErrDeprecated)
+}
+
+//--------------------
+// PRIVATE HELPERS
+//--------------------
+
+// callInfo bundles the info about the call environment
+// when a logging statement occured.
+type callInfo struct {
+	packageName string
+	packagePart string
+	fileName    string
+	funcName    string
+	line        int
+}
+
+// retrieveCallInfo
+func retrieveCallInfo() *callInfo {
+	pc, file, line, _ := runtime.Caller(3)
+	_, fileName := path.Split(file)
+	parts := strings.Split(runtime.FuncForPC(pc).Name(), ".")
+	pl := len(parts)
+	packageName := ""
+	funcName := parts[pl-1]
+
+	if parts[pl-2][0] == '(' {
+		funcName = parts[pl-2] + "." + funcName
+		packageName = strings.Join(parts[0:pl-2], ".")
+	} else {
+		packageName = strings.Join(parts[0:pl-1], ".")
+	}
+
+	packageParts := strings.Split(packageName, "/")
+	packagePart := strings.ToUpper(packageParts[len(packageParts)-1])
+
+	return &callInfo{
+		packageName: packageName,
+		packagePart: packagePart,
+		fileName:    fileName,
+		funcName:    funcName,
+		line:        line,
+	}
 }
 
 // EOF

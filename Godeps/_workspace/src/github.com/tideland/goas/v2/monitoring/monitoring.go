@@ -15,6 +15,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/tideland/goas/v1/version"
 	"github.com/tideland/goas/v2/logger"
 	"github.com/tideland/goas/v2/loop"
 	"github.com/tideland/goas/v3/errors"
@@ -33,6 +34,15 @@ const (
 	cmdDynamicStatusRetrieverRead
 	cmdDynamicStatusRetrieversReadAll
 )
+
+//--------------------
+// VERSION
+//--------------------
+
+// PackageVersion returns the version of the version package.
+func PackageVersion() version.Version {
+	return version.New(2, 1, 0)
+}
 
 //--------------------
 // SYSTEM MONITOR

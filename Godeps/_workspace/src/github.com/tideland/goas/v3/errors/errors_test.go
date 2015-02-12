@@ -29,10 +29,11 @@ func TestValidation(t *testing.T) {
 	ec := 1
 	messages := errors.Messages{ec: "valid"}
 	err := errors.New(ec, messages)
-	fileName, line, lerr := errors.Location(err)
+	packageName, fileName, line, lerr := errors.Location(err)
 
 	assert.True(errors.Valid(err))
 	assert.Nil(lerr)
+	assert.Equal(packageName, "github.com/tideland/goas/v3/errors_test")
 	assert.Equal(fileName, "errors_test.go")
 	assert.Equal(line, 31)
 }
@@ -46,7 +47,7 @@ func TestAnnotation(t *testing.T) {
 	aerr := testError("wrapped")
 	err := errors.Annotate(aerr, ec, messages)
 
-	assert.ErrorMatch(err, `\[E123\] annotated: wrapped`)
+	assert.ErrorMatch(err, `\[ERRORS_TEST:123\] annotated: wrapped`)
 	assert.Equal(errors.Annotated(err), aerr)
 	assert.True(errors.IsInvalidTypeError(errors.Annotated(aerr)))
 	assert.Length(errors.Stack(err), 2)
@@ -60,7 +61,7 @@ func TestIsError(t *testing.T) {
 	messages := errors.Messages{ec: "test error %d"}
 	err := errors.New(ec, messages, 1)
 
-	assert.ErrorMatch(err, `\[E042\] test error 1`)
+	assert.ErrorMatch(err, `\[ERRORS_TEST:042\] test error 1`)
 	assert.True(errors.IsError(err, ec))
 	assert.False(errors.IsError(err, 0))
 
