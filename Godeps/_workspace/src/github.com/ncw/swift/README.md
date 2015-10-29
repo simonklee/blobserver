@@ -34,6 +34,8 @@ Here is a short example from the docs
         UserName: "user",
         ApiKey:   "key",
         AuthUrl:  "auth_url",
+        Domain:   "domain",  // Name of the domain (v3 auth only)
+        Tenant:   "tenant",  // Name of the tenant (v2 auth only)
     }
     // Authenticate
     err := c.Authenticate()
@@ -44,7 +46,7 @@ Here is a short example from the docs
     containers, err := c.ContainerNames(nil)
     fmt.Println(containers)
     // etc...
-    
+
 Additions
 ---------
 
@@ -53,10 +55,11 @@ The `rs` sub project contains a wrapper for the Rackspace specific CDN Managemen
 Testing
 -------
 
-To run the tests you'll need access to an Openstack Swift server or a
-Rackspace Cloud files account.
+To run the tests you can either use an embedded fake Swift server
+either use a real Openstack Swift server or a Rackspace Cloud files account.
 
-Set these environment variables before running the tests
+When using a real Swift server, you need to set these environment variables
+before running the tests
 
     export SWIFT_API_USER='user'
     export SWIFT_API_KEY='key'
@@ -66,6 +69,29 @@ And optionally these if using v2 authentication
 
     export SWIFT_TENANT='TenantName'
     export SWIFT_TENANT_ID='TenantId'
+
+And optionally these if using v3 authentication
+
+    export SWIFT_TENANT='TenantName'
+    export SWIFT_TENANT_ID='TenantId'
+    export SWIFT_API_DOMAIN_ID='domain id'
+    export SWIFT_API_DOMAIN='domain name'
+
+And optionally these if using v3 trust
+
+    export SWIFT_TRUST_ID='TrustId'
+
+And optionally this if you want to skip server certificate validation
+
+    export SWIFT_AUTH_INSECURE=1
+
+And optionally this to configure the connect channel timeout, in seconds
+
+    export SWIFT_CONNECTION_CHANNEL_TIMEOUT=60
+
+And optionally this to configure the data channel timeout, in seconds
+
+    export SWIFT_DATA_CHANNEL_TIMEOUT=60
 
 Then run the tests with `go test`
 
@@ -100,3 +126,11 @@ Contributors
 - Paul Querna <pquerna@apache.org>
 - Livio Soares <liviobs@gmail.com>
 - thesyncim <thesyncim@gmail.com>
+- lsowen <lsowen@s1network.com>
+- Sylvain Baubeau <sbaubeau@redhat.com>
+- Chris Kastorff <encryptio@gmail.com>
+- Dai HaoJun <haojun.dai@hp.com>
+- Hua Wang <wanghua.humble@gmail.com>
+- Fabian Ruff <fabian@progra.de>
+- Arturo Reuschenbach Puncernau <reuschenbach@gmail.com>
+- Petr Kotek <petr.kotek@bigcommerce.com>

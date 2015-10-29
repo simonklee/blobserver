@@ -3,12 +3,14 @@ package swift
 import (
 	"bufio"
 	"bytes"
+	"crypto/hmac"
 	"crypto/md5"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash"
 	"io"
-	"log"
 	"mime"
 	"net/http"
 	"net/url"
@@ -73,9 +75,16 @@ const (
 //		containers, _ := c.ContainerNames(nil)
 //		fmt.Fprintf(w, "containers: %q", containers)
 //	}
+//
+// If you don't supply a Transport, one is made which relies on
+// http.ProxyFromEnvironment (http://golang.org/pkg/net/http/#ProxyFromEnvironment).
+// This means that the connection will respect the HTTP proxy specified by the
+// environment variables $HTTP_PROXY and $NO_PROXY.
 type Connection struct {
 	// Parameters - fill these in before calling Authenticate
 	// They are all optional except UserName, ApiKey and AuthUrl
+	Domain         string            // User's domain name
+	DomainId       string            // User's domain Id
 	UserName       string            // UserName for api
 	ApiKey         string            // Key for api access
 	AuthUrl        string            // Auth URL
@@ -88,6 +97,7 @@ type Connection struct {
 	Internal       bool              // Set this to true to use the the internal / service network
 	Tenant         string            // Name of the tenant (v2 auth only)
 	TenantId       string            // Id of the tenant (v2 auth only)
+	TrustId        string            // Id of the trust (v3 auth only)
 	Transport      http.RoundTripper `json:"-" xml:"-"` // Optional specialised http.Transport (eg. for Google Appengine)
 	// These are filled in after Authenticate is called as are the defaults for above
 	StorageUrl string
@@ -187,15 +197,12 @@ func (c *Connection) parseHeaders(resp *http.Response, errorMap errorMap) error 
 
 // readHeaders returns a Headers object from the http.Response.
 //
-// Logs a warning if receives multiple values for a key (which
-// should never happen)
+// If it receives multiple values for a key (which should never
+// happen) it will use the first one
 func readHeaders(resp *http.Response) Headers {
 	headers := Headers{}
 	for key, values := range resp.Header {
 		headers[key] = values[0]
-		if len(values) > 1 {
-			log.Printf("swift: received multiple values for header %q", key)
-		}
 	}
 	return headers
 }
@@ -247,6 +254,7 @@ func (c *Connection) setDefaults() {
 		c.Transport = &http.Transport{
 			//		TLSClientConfig:    &tls.Config{RootCAs: pool},
 			//		DisableCompression: true,
+			Proxy:               http.ProxyFromEnvironment,
 			MaxIdleConnsPerHost: 2048,
 		}
 	}
@@ -384,6 +392,26 @@ func (c *Connection) authenticated() bool {
 	return c.StorageUrl != "" && c.AuthToken != ""
 }
 
+// SwiftInfo contains the JSON object returned by Swift when the /info
+// route is queried. The object contains, among others, the Swift version,
+// the enabled middlewares and their configuration
+type SwiftInfo map[string]interface{}
+
+// Discover Swift configuration by doing a request against /info
+func (c *Connection) QueryInfo() (infos SwiftInfo, err error) {
+	infoUrl, err := url.Parse(c.StorageUrl)
+	if err != nil {
+		return nil, err
+	}
+	infoUrl.Path = path.Join(infoUrl.Path, "..", "..", "info")
+	resp, err := http.Get(infoUrl.String())
+	if err == nil {
+		err = readJson(resp, &infos)
+		return infos, err
+	}
+	return nil, err
+}
+
 // RequestOpts contains parameters for Connection.storage.
 type RequestOpts struct {
 	Container  string
@@ -410,6 +438,10 @@ type RequestOpts struct {
 // resp.Body.Close() must be called on it, unless noResponse is set in
 // which case the body will be closed in this function
 //
+// If "Content-Length" is set in p.Headers it will be used - this can
+// be used to override the default chunked transfer encoding for
+// uploads.
+//
 // This will Authenticate if necessary, and re-authenticate if it
 // receives a 401 error which means the token has expired
 //
@@ -425,41 +457,55 @@ func (c *Connection) Call(targetUrl string, p RequestOpts) (resp *http.Response,
 	var req *http.Request
 	for {
 		var authToken string
-		targetUrl, authToken, err = c.getUrlAndAuthToken(targetUrl, p.OnReAuth)
-
-		var url *url.URL
-		url, err = url.Parse(targetUrl)
+		if targetUrl, authToken, err = c.getUrlAndAuthToken(targetUrl, p.OnReAuth); err != nil {
+			return //authentication failure
+		}
+		var URL *url.URL
+		URL, err = url.Parse(targetUrl)
 		if err != nil {
 			return
 		}
 		if p.Container != "" {
-			url.Path += "/" + p.Container
+			URL.Path += "/" + p.Container
 			if p.ObjectName != "" {
-				url.Path += "/" + p.ObjectName
+				URL.Path += "/" + p.ObjectName
 			}
 		}
 		if p.Parameters != nil {
-			url.RawQuery = p.Parameters.Encode()
+			URL.RawQuery = p.Parameters.Encode()
 		}
 		timer := time.NewTimer(c.ConnectTimeout)
 		reader := p.Body
 		if reader != nil {
 			reader = newWatchdogReader(reader, c.Timeout, timer)
 		}
-		req, err = http.NewRequest(p.Operation, url.String(), reader)
+		req, err = http.NewRequest(p.Operation, URL.String(), reader)
 		if err != nil {
 			return
 		}
 		if p.Headers != nil {
 			for k, v := range p.Headers {
-				req.Header.Add(k, v)
+				// Set ContentLength in req if the user passed it in in the headers
+				if k == "Content-Length" {
+					contentLength, err := strconv.ParseInt(v, 10, 64)
+					if err != nil {
+						return nil, nil, fmt.Errorf("Invalid %q header %q: %v", k, v, err)
+					}
+					req.ContentLength = contentLength
+				} else {
+					req.Header.Add(k, v)
+				}
 			}
 		}
-		req.Header.Add("User-Agent", DefaultUserAgent)
+		req.Header.Add("User-Agent", c.UserAgent)
 		req.Header.Add("X-Auth-Token", authToken)
 		resp, err = c.doTimeoutRequest(timer, req)
 		if err != nil {
-			return
+			if (p.Operation == "HEAD" || p.Operation == "GET") && retries > 0 {
+				retries--
+				continue
+			}
+			return nil, nil, err
 		}
 		// Check to see if token has expired
 		if resp.StatusCode == 401 && retries > 0 {
@@ -554,7 +600,8 @@ func readJson(resp *http.Response, result interface{}) (err error) {
 // ContainersOpts is options for Containers() and ContainerNames()
 type ContainersOpts struct {
 	Limit     int     // For an integer value n, limits the number of results to at most n values.
-	Marker    string  // Given a string value x, return object names greater in value than the specified marker.
+	Prefix    string  // Given a string value x, return container names matching the specified prefix.
+	Marker    string  // Given a string value x, return container names greater in value than the specified marker.
 	EndMarker string  // Given a string value x, return container names less in value than the specified marker.
 	Headers   Headers // Any additional HTTP headers - can be nil
 }
@@ -566,6 +613,9 @@ func (opts *ContainersOpts) parse() (url.Values, Headers) {
 	if opts != nil {
 		if opts.Limit > 0 {
 			v.Set("limit", strconv.Itoa(opts.Limit))
+		}
+		if opts.Prefix != "" {
+			v.Set("prefix", opts.Prefix)
 		}
 		if opts.Marker != "" {
 			v.Set("marker", opts.Marker)
@@ -1041,19 +1091,17 @@ type ObjectCreateFile struct {
 
 // Write bytes to the object - see io.Writer
 func (file *ObjectCreateFile) Write(p []byte) (n int, err error) {
-	// Check to see if write has finished already
-	select {
-	case <-file.done:
+	n, err = file.pipeWriter.Write(p)
+	if err == io.ErrClosedPipe {
 		if file.err != nil {
 			return 0, file.err
 		}
 		return 0, newError(500, "Write on closed file")
-	default:
 	}
-	if file.checkHash {
+	if err == nil && file.checkHash {
 		_, _ = file.hash.Write(p)
 	}
-	return file.pipeWriter.Write(p)
+	return
 }
 
 // Close the object and checks the md5sum if it was required.
@@ -1155,6 +1203,7 @@ func (c *Connection) ObjectCreate(container string, objectName string, checkHash
 			ErrorMap:   objectErrorMap,
 		})
 		// Signal finished
+		pipeReader.Close()
 		close(file.done)
 	}()
 	return
@@ -1375,6 +1424,14 @@ var _ io.Seeker = &ObjectOpenFile{}
 // will also check the length returned. No checking will be done if
 // you don't read all the contents.
 //
+// Note that objects with X-Object-Manifest set won't ever have their
+// md5sum's checked as the md5sum reported on the object is actually
+// the md5sum of the md5sums of the parts. This isn't very helpful to
+// detect a corrupted download as the size of the parts aren't known
+// without doing more operations.  If you want to ensure integrity of
+// an object with a manifest then you will need to download everything
+// in the manifest separately.
+//
 // headers["Content-Type"] will give the content type if desired.
 func (c *Connection) ObjectOpen(container string, objectName string, checkHash bool, h Headers) (file *ObjectOpenFile, headers Headers, err error) {
 	var resp *http.Response
@@ -1387,6 +1444,11 @@ func (c *Connection) ObjectOpen(container string, objectName string, checkHash b
 	})
 	if err != nil {
 		return
+	}
+	// Can't check MD5 on an object with X-Object-Manifest set
+	if checkHash && headers["X-Object-Manifest"] != "" {
+		// log.Printf("swift: turning off md5 checking on object with manifest %v", objectName)
+		checkHash = false
 	}
 	file = &ObjectOpenFile{
 		connection: c,
@@ -1402,8 +1464,10 @@ func (c *Connection) ObjectOpen(container string, objectName string, checkHash b
 		file.body = io.TeeReader(resp.Body, file.hash)
 	}
 	// Read Content-Length
-	file.length, err = getInt64FromHeader(resp, "Content-Length")
-	file.lengthOk = (err == nil)
+	if resp.Header.Get("Content-Length") != "" {
+		file.length, err = getInt64FromHeader(resp, "Content-Length")
+		file.lengthOk = (err == nil)
+	}
 	return
 }
 
@@ -1457,6 +1521,16 @@ func (c *Connection) ObjectDelete(container string, objectName string) error {
 		ErrorMap:   objectErrorMap,
 	})
 	return err
+}
+
+// ObjectTempUrl returns a temporary URL for an object
+func (c *Connection) ObjectTempUrl(container string, objectName string, secretKey string, method string, expires time.Time) string {
+	mac := hmac.New(sha1.New, []byte(secretKey))
+	prefix, _ := url.Parse(c.StorageUrl)
+	body := fmt.Sprintf("%s\n%d\n%s/%s/%s", method, expires.Unix(), prefix.Path, container, objectName)
+	mac.Write([]byte(body))
+	sig := hex.EncodeToString(mac.Sum(nil))
+	return fmt.Sprintf("%s/%s/%s?temp_url_sig=%s&temp_url_expires=%d", c.StorageUrl, container, objectName, sig, expires.Unix())
 }
 
 // parseResponseStatus parses string like "200 OK" and returns Error.
@@ -1658,8 +1732,10 @@ func (c *Connection) Object(container string, objectName string) (info Object, h
 	// X-Object-Meta-Dairy: Bacon
 	info.Name = objectName
 	info.ContentType = resp.Header.Get("Content-Type")
-	if info.Bytes, err = getInt64FromHeader(resp, "Content-Length"); err != nil {
-		return
+	if resp.Header.Get("Content-Length") != "" {
+		if info.Bytes, err = getInt64FromHeader(resp, "Content-Length"); err != nil {
+			return
+		}
 	}
 	info.ServerLastModified = resp.Header.Get("Last-Modified")
 	if info.LastModified, err = time.Parse(http.TimeFormat, info.ServerLastModified); err != nil {

@@ -29,7 +29,9 @@ type Authenticator interface {
 func newAuth(c *Connection) (Authenticator, error) {
 	AuthVersion := c.AuthVersion
 	if AuthVersion == 0 {
-		if strings.Contains(c.AuthUrl, "v2") {
+		if strings.Contains(c.AuthUrl, "v3") {
+			AuthVersion = 3
+		} else if strings.Contains(c.AuthUrl, "v2") {
 			AuthVersion = 2
 		} else if strings.Contains(c.AuthUrl, "v1") {
 			AuthVersion = 1
@@ -47,6 +49,8 @@ func newAuth(c *Connection) (Authenticator, error) {
 			// this is just an optimization.
 			useApiKey: len(c.ApiKey) >= 32,
 		}, nil
+	case 3:
+		return &v3Auth{}, nil
 	}
 	return nil, newErrorf(500, "Auth Version %d not supported", AuthVersion)
 }
@@ -152,6 +156,7 @@ func (auth *v2Auth) Request(c *Connection) (*http.Request, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", c.UserAgent)
 	return req, nil
 }
 
